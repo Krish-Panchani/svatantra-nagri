@@ -5,13 +5,32 @@ from datetime import datetime
 import torch
 import numpy as np
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List
 import warnings
+warnings.filterwarnings('ignore')
+import requests
 import firebase_admin
 from firebase_admin import credentials, firestore
+from traffic_agent import FirebaseManager
 
-from main import FirebaseManager
-warnings.filterwarnings('ignore')
+TRAFFIC_DATA_URL = "http://localhost:8050/api/traffic-data"
+JOINT_ALERTS_URL = "http://localhost:8050/api/joint-alerts"
+
+def post_traffic_update(traffic_data):
+    try:
+        response = requests.post(TRAFFIC_DATA_URL, json=traffic_data, timeout=2)
+        if response.status_code != 200:
+            print(f"Warning: Failed to update traffic data: {response.text}")
+    except Exception as e:
+        print(f"Error posting traffic update: {e}")
+
+def post_joint_alert(alert_data):
+    try:
+        response = requests.post(JOINT_ALERTS_URL, json=alert_data, timeout=2)
+        if response.status_code != 200:
+            print(f"Warning: Failed to post joint alert: {response.text}")
+    except Exception as e:
+        print(f"Error posting joint alert: {e}")
 
 try:
     import torch.nn as nn
@@ -21,7 +40,7 @@ except ImportError:
     TORCH_AVAILABLE = False
     print("PyTorch not available. Please install with: pip install torch")
 
-# --- Existing Traffic Agent Classes (Modified Where Noted) ---
+
 
 class LocalMessageQueue:
     """Simulates a message queue for local development"""
@@ -39,15 +58,6 @@ class LocalMessageQueue:
 
 class TrafficSensorSimulator:
     """Simulates traffic sensor data with congestion scenario"""
-    # def __init__(self):
-    #     self.sensor_locations = [
-    #         {'id': 'TS001', 'location': 'Main St & 1st Ave', 'type': 'intersection'},
-    #         {'id': 'TS002', 'location': 'Highway 101 Mile 15', 'type': 'highway'},
-    #         {'id': 'TS003', 'location': 'Downtown Bridge', 'type': 'bridge'},
-    #         {'id': 'TS004', 'location': 'University Campus Gate', 'type': 'arterial'},
-    #         {'id': 'TS005', 'location': 'Shopping Mall Entrance', 'type': 'commercial'}
-    #     ]
-
     def __init__(self, firebase_manager: FirebaseManager = None):
         self.firebase = firebase_manager
         self.default_locations = [
@@ -75,7 +85,7 @@ class TrafficSensorSimulator:
         except Exception as e:
             print(f"Error initializing sensor locations: {e}")
             return self.default_locations
-
+        
     def get_current_data(self):
         data = {}
         current_hour = datetime.now().hour
@@ -304,11 +314,6 @@ class OpenCityModelWrapper:
         self.model = None
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.is_loaded = False
-        self.config = {
-            'mini': {'hidden_dim': 64, 'num_layers': 2, 'num_heads': 4},
-            'base': {'hidden_dim': 128, 'num_layers': 4, 'num_heads': 8},
-            'plus': {'hidden_dim': 256, 'num_layers': 6, 'num_heads': 16}
-        }
         if TORCH_AVAILABLE:
             self.load_model()
 
@@ -323,73 +328,36 @@ class OpenCityModelWrapper:
                 self.model = self._create_mock_model()
                 self.is_loaded = True
                 print(f"✓ Initialized mock OpenCity-{self.model_size} model")
-                print("  To use real model, download from: https://github.com/HKUDS/OpenCity")
+                print("  To use real model, provide a valid model_path")
         except Exception as e:
             print(f"✗ Failed to load model: {e}")
             self.model = self._create_mock_model()
             self.is_loaded = True
 
     def _create_mock_model(self):
-        config = self.config[self.model_size]
-        return MockTrafficModel(
-            input_dim=32,
-            hidden_dim=config['hidden_dim'],
-            output_dim=3,
-            num_layers=config['num_layers']
-        )
+        # Mock model for testing
+        class MockLSTM(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.lstm = nn.LSTM(input_size=32, hidden_size=64, num_layers=2, batch_first=True)
+                self.fc = nn.Linear(64, 3)
+            def forward(self, x):
+                _, (h_n, _) = self.lstm(x)
+                out = self.fc(h_n[-1])
+                return torch.sigmoid(out)
+        return MockLSTM()
 
-    def predict(self, features: Dict) -> Dict:
+    def predict(self, input_tensor: torch.Tensor) -> Dict:
         if not self.is_loaded:
             return {'error': 'Model not loaded'}
         try:
-            input_tensor = self._prepare_features(features)
             with torch.no_grad():
-                predictions = self.model(input_tensor)
-            return self._postprocess_predictions(predictions, features)
+                predictions = self.model(input_tensor.to(self.device))
+            return self._postprocess_predictions(predictions)
         except Exception as e:
             return {'error': f'Prediction failed: {str(e)}'}
 
-    def _prepare_features(self, features: Dict) -> torch.Tensor:
-        traffic_features = []
-        if 'traffic_data' in features:
-            for data in features['traffic_data'].values():
-                traffic_features.extend([
-                    data.get('vehicle_count', 0) / 1000,
-                    data.get('average_speed', 0) / 100,
-                    data.get('density', 0),
-                    data.get('congestion_level', 0),
-                ])
-        if 'weather' in features:
-            weather = features['weather']
-            weather_impact = self._calculate_weather_impact(weather)
-            traffic_features.append(weather_impact)
-        else:
-            traffic_features.append(0.0)
-        now = datetime.now()
-        time_features = [
-            now.hour / 24.0,
-            now.weekday() / 7.0,
-        ]
-        traffic_features.extend(time_features)
-        while len(traffic_features) < 32:
-            traffic_features.append(0.0)
-        input_tensor = torch.tensor(traffic_features[:32], dtype=torch.float32)
-        return input_tensor.unsqueeze(0)
-
-    def _calculate_weather_impact(self, weather: Dict) -> float:
-        impact = 0.0
-        temp = weather.get('temperature', 20)
-        if temp < 0 or temp > 35:
-            impact += 0.3
-        precip = weather.get('precipitation', 0)
-        if precip > 0:
-            impact += min(precip / 10.0, 0.5)
-        visibility = weather.get('visibility', 10)
-        if visibility < 5:
-            impact += (5 - visibility) / 5.0 * 0.4
-        return min(impact, 1.0)
-
-    def _postprocess_predictions(self, predictions: torch.Tensor, features: Dict) -> Dict:
+    def _postprocess_predictions(self, predictions: torch.Tensor) -> Dict:
         pred_array = predictions.cpu().numpy().flatten()
         return {
             'short_term_flow': max(0, float(pred_array[0] * 1000)),
@@ -400,39 +368,23 @@ class OpenCityModelWrapper:
             'model_version': f'OpenCity-{self.model_size}'
         }
 
-class MockTrafficModel(nn.Module):
-    """Mock traffic prediction model for demonstration"""
-    def __init__(self, input_dim: int, hidden_dim: int, output_dim: int, num_layers: int):
-        super().__init__()
-        self.layers = nn.ModuleList()
-        self.layers.append(nn.Linear(input_dim, hidden_dim))
-        for _ in range(num_layers - 1):
-            self.layers.append(nn.Linear(hidden_dim, hidden_dim))
-        self.output_layer = nn.Linear(hidden_dim, output_dim)
-        self.dropout = nn.Dropout(0.1)
-
-    def forward(self, x):
-        for layer in self.layers:
-            x = F.relu(layer(x))
-            x = self.dropout(x)
-        x = self.output_layer(x)
-        return torch.sigmoid(x)
-
 class EnhancedShortTermPredictionModel:
-    """Enhanced short-term prediction using pre-trained models"""
-    def __init__(self, model_type: str = "opencity"):
-        self.model_type = model_type
-        if model_type == "opencity":
-            self.predictor = OpenCityModelWrapper(model_size="base")  # Still using mock for short-term
-        else:
-            raise ValueError(f"Unknown model type: {model_type}")
+    """Enhanced short-term prediction using OpenCity model"""
+    def __init__(self, model_path: str):
+        self.predictor = OpenCityModelWrapper(model_path=model_path, model_size="plus")
 
-    def predict(self, features: Dict) -> Dict:
+    def predict(self, features: torch.Tensor) -> Dict:
         if not self.predictor.is_loaded:
-            return self._fallback_prediction(features)
-        return self.predictor.predict(features)
+            return self._fallback_prediction()
+        prediction = self.predictor.predict(features)
+        return {
+            'short_term_flow': prediction['short_term_flow'],
+            'confidence_score': prediction['confidence_score'],
+            'prediction_timestamp': prediction['prediction_timestamp'],
+            'model_version': prediction['model_version']
+        }
 
-    def _fallback_prediction(self, features: Dict) -> Dict:
+    def _fallback_prediction(self):
         return {
             'short_term_flow': 500,
             'confidence_score': 0.3,
@@ -441,69 +393,104 @@ class EnhancedShortTermPredictionModel:
         }
 
 class EnhancedMediumTermPredictionModel:
-    """Enhanced medium-term prediction"""
-    def __init__(self):
-        self.predictor = OpenCityModelWrapper(
-            model_path="C:\\agentic-ai\\Twin\\Traffic_Agent\\OpenCity-Plus\\OpenCity-plus.pth",
-            model_size="plus"
-        )
+    """Enhanced medium-term prediction using OpenCity model"""
+    def __init__(self, model_path: str):
+        self.predictor = OpenCityModelWrapper(model_path=model_path, model_size="plus")
 
-    def predict(self, features: Dict) -> Dict:
+    def predict(self, features: torch.Tensor) -> Dict:
         if not self.predictor.is_loaded:
             return {'medium_term_flow': 750, 'confidence_score': 0.4}
         prediction = self.predictor.predict(features)
         return {
-            'medium_term_flow': prediction.get('medium_term_flow', 750),
-            'confidence_score': prediction.get('confidence_score', 0.4)
+            'medium_term_flow': prediction['medium_term_flow'],
+            'confidence_score': prediction['confidence_score']
         }
 
 class EnhancedLongTermPredictionModel:
-    """Enhanced long-term prediction"""
-    def __init__(self):
-        self.predictor = OpenCityModelWrapper(
-            model_path="C:\\agentic-ai\\Twin\\Traffic_Agent\\OpenCity-Plus\\OpenCity-plus.pth",
-            model_size="plus"
-        )
+    """Enhanced long-term prediction using OpenCity model"""
+    def __init__(self, model_path: str):
+        self.predictor = OpenCityModelWrapper(model_path=model_path, model_size="plus")
 
-    def predict(self, features: Dict) -> Dict:
+    def predict(self, features: torch.Tensor) -> Dict:
         if not self.predictor.is_loaded:
             return {'long_term_flow': 600, 'confidence_score': 0.3}
         prediction = self.predictor.predict(features)
         return {
-            'long_term_flow': prediction.get('long_term_flow', 600),
-            'confidence_score': prediction.get('confidence_score', 0.3)
+            'long_term_flow': prediction['long_term_flow'],
+            'confidence_score': prediction['confidence_score']
         }
 
 class EnhancedTrafficFeatureEngineer:
-    """Enhanced feature engineering for pre-trained models"""
-    def create_features(self, traffic_data, current_state, historical_data, external_factors):
-        features = {
-            'traffic_data': traffic_data,
-            'weather': external_factors.get('weather_conditions', {}),
-            'temporal': self._create_temporal_features(),
-            'events': external_factors.get('scheduled_events', []),
-            'historical': self._process_historical_data(historical_data)
-        }
-        return features
+    """Enhanced feature engineering for time-series traffic prediction"""
+    def __init__(self, sequence_length=10, feature_dim=32):
+        self.sequence_length = sequence_length
+        self.feature_dim = feature_dim
 
-    def _create_temporal_features(self):
-        now = datetime.now()
-        return {
-            'hour': now.hour,
-            'day_of_week': now.weekday(),
-            'month': now.month,
-            'is_weekend': now.weekday() >= 5,
-            'is_peak_hour': now.hour in [7, 8, 9, 17, 18, 19],
-            'season': (now.month - 1) // 3
-        }
+    def create_features(self, traffic_history):
+        if not traffic_history:
+            # Create a default entry
+            default_entry = {
+                'timestamp': datetime.now(),
+                'weather': {},
+                'traffic_data': {sensor_id: {'vehicle_count': 0, 'average_speed': 0, 'density': 0, 'congestion_level': 0} for sensor_id in ['TS001', 'TS002', 'TS003', 'TS004', 'TS005']}
+            }
+            padded_history = [default_entry] * self.sequence_length
+        else:
+            if len(traffic_history) < self.sequence_length:
+                padded_history = [traffic_history[0]] * (self.sequence_length - len(traffic_history)) + traffic_history
+            else:
+                padded_history = traffic_history[-self.sequence_length:]
+        
+        sequence = []
+        for entry in padded_history:
+            features = self._create_time_step_features(entry)
+            sequence.append(features)
+        
+        # Convert to tensor: (1, sequence_length, feature_dim)
+        sequence_tensor = torch.tensor(sequence, dtype=torch.float32).unsqueeze(0)
+        return sequence_tensor
 
-    def _process_historical_data(self, historical_data):
-        return {
-            'avg_flow_last_week': 650,
-            'avg_flow_same_time_last_week': 580,
-            'trend_direction': 'increasing',
-            'seasonal_factor': 1.1
-        }
+    def _create_time_step_features(self, history_entry):
+        traffic_data = history_entry['traffic_data']
+        weather = history_entry['weather']
+        timestamp = history_entry['timestamp']
+        
+        # Traffic features
+        traffic_features = []
+        for sensor_id in sorted(traffic_data.keys()):  # ensure consistent order
+            data = traffic_data[sensor_id]
+            traffic_features.extend([
+                data.get('vehicle_count', 0) / 1000,
+                data.get('average_speed', 0) / 100,
+                data.get('density', 0),
+                data.get('congestion_level', 0),
+            ])
+        
+        # Weather features
+        weather_features = [
+            weather.get('temperature', 20) / 50,  # normalize
+            weather.get('humidity', 50) / 100,
+            weather.get('precipitation', 0) / 10,
+            weather.get('wind_speed', 0) / 20,
+            weather.get('visibility', 10) / 10,
+            weather.get('traffic_impact_score', 0.5),
+        ]
+        
+        # Time features
+        dt = timestamp  # Already a datetime object
+        time_features = [
+            dt.hour / 24.0,
+            dt.weekday() / 7.0,
+            1.0 if dt.weekday() >= 5 else 0.0,  # is_weekend
+            1.0 if dt.hour in [7,8,9,17,18,19] else 0.0,  #  # is_peak_hour
+        ]
+        
+        # Combine all features
+        features = traffic_features + weather_features + time_features
+        # Pad to feature_dim
+        while len(features) < self.feature_dim:
+            features.append(0.0)
+        return features[:self.feature_dim]
 
 class CongestionAnalyzer:
     """Analyzes congestion based on current state and predictions"""
@@ -615,16 +602,30 @@ class DataProcessingModule:
 
 class TrafficDigitalTwin:
     def __init__(self, firebase_manager: FirebaseManager = None):
+        # Initialize traffic_network first
         self.firebase = firebase_manager
         self.traffic_network = TrafficNetworkGraph()
         self.current_state = TrafficState()
         self.historical_data = HistoricalDataStore()
         self.simulation_engine = TrafficSimulationEngine()
+        # Now initialize signal_states using traffic_network
+        self.signal_states = {sensor_id: {'green_time': 30} for sensor_id in self.traffic_network.segments}
+        self.traffic_history = []  # list of {'timestamp': datetime, 'weather': dict, 'traffic_data': dict}
+        self.history_length = 10
 
     def update_state(self, processed_data):
         data_type = processed_data['source']
         if data_type == 'traffic_sensors':
             self._update_traffic_flow(processed_data)
+            # Create history entry
+            history_entry = {
+                'timestamp': processed_data['timestamp'],
+                'weather': self.current_state.weather.copy() if self.current_state.weather else {},
+                'traffic_data': processed_data['processed_data']
+            }
+            self.traffic_history.append(history_entry)
+            if len(self.traffic_history) > self.history_length:
+                self.traffic_history.pop(0)
         elif data_type == 'weather_api':
             self._update_weather_conditions(processed_data)
         elif data_type == 'events_calendar':
@@ -677,54 +678,42 @@ class TrafficDigitalTwin:
         return traffic_data
 
     def update_signal_state(self, intersection_id, timing):
-        pass
+        if intersection_id in self.signal_states:
+            self.signal_states[intersection_id] = timing
+        else:
+            print(f"Warning: Intersection {intersection_id} not found in signal_states")
+
+    def get_traffic_data_history(self):
+        return self.traffic_history
 
 class TrafficPredictionModule:
     """Enhanced traffic prediction module with pre-trained models"""
     def __init__(self, digital_twin):
         self.digital_twin = digital_twin
+        model_path = "C:\\agentic-ai\\swatantra-nagri\\agents\\OpenCity-Plus\\OpenCity-plus.pth"
         self.models = {
-            'short_term': EnhancedShortTermPredictionModel(model_type="opencity"),
-            'medium_term': EnhancedMediumTermPredictionModel(),
-            'long_term': EnhancedLongTermPredictionModel()
+            'short_term': EnhancedShortTermPredictionModel(model_path),
+            'medium_term': EnhancedMediumTermPredictionModel(model_path),
+            'long_term': EnhancedLongTermPredictionModel(model_path)
         }
-        self.feature_engineer = EnhancedTrafficFeatureEngineer()
+        self.feature_engineer = EnhancedTrafficFeatureEngineer(sequence_length=10, feature_dim=32)
 
     def predict_traffic_flow(self, prediction_horizon='short_term'):
-        current_state = self.digital_twin.get_current_state()
-        traffic_data = self.digital_twin.get_current_traffic_data()
-        external_factors = self._get_external_factors()
-        features = self.feature_engineer.create_features(
-            traffic_data=traffic_data,
-            current_state=current_state,
-            historical_data=self.digital_twin.historical_data,
-            external_factors=external_factors
-        )
+        traffic_history = self.digital_twin.get_traffic_data_history()
+        features = self.feature_engineer.create_features(traffic_history)
         model = self.models[prediction_horizon]
         prediction = model.predict(features)
-        confidence = prediction.get('confidence_score', 0.5)
         return {
             'prediction_horizon': prediction_horizon,
             'predicted_flows': prediction,
-            'confidence_score': confidence,
             'timestamp': datetime.now()
-        }
-
-    def _get_external_factors(self):
-        return {
-            'weather_conditions': self.digital_twin.current_state.weather,
-            'scheduled_events': self.digital_twin.current_state.events,
-            'day_of_week': datetime.now().weekday(),
-            'time_of_day': datetime.now().hour,
-            'school_holidays': False,
-            'public_holidays': False
         }
 
 class TrafficReasoningModule:
     def __init__(self, digital_twin, prediction_module):
         self.digital_twin = digital_twin
         self.prediction_module = prediction_module
-        self.congestion_analyzer = CongestionAnalyzer(digital_twin)  # Pass digital_twin
+        self.congestion_analyzer = CongestionAnalyzer(digital_twin)
         self.optimization_engine = TrafficOptimizationEngine()
 
     def analyze_traffic_situation(self):
@@ -737,7 +726,6 @@ class TrafficReasoningModule:
             predictions=predictions
         )
         critical_issues = self._identify_critical_issues(congestion_analysis)
-        # Enhanced logging to show predictions
         print("Predictions for this cycle:")
         for horizon, pred in predictions.items():
             print(f"  {horizon}: {pred['predicted_flows']}")
@@ -840,9 +828,9 @@ class TrafficActionModule:
 
 class TrafficAgent:
     def __init__(self):
-                # Initialize Firebase
-        service_account_path = "C:\\agentic-ai\\Twin\\Traffic_Agent\\google-service.json"  # Update this path
+        service_account_path = "C:\\agentic-ai\\swatantra-nagri\\google-service.json"  # Update this path
         self.firebase = FirebaseManager(service_account_path)
+    
         self.data_ingestion = DataIngestionModule()
         self.data_processing = DataProcessingModule(self.data_ingestion.message_queue)
         self.digital_twin = TrafficDigitalTwin()
@@ -871,6 +859,34 @@ class TrafficAgent:
                 )
                 self._learn_from_results(situation_analysis, action_plan, execution_results)
                 self._log_agent_cycle(situation_analysis, action_plan, execution_results)
+
+                # --- Send traffic state data ---
+                traffic_snapshot = {
+                    "traffic_data": self.digital_twin.get_current_traffic_data(),
+                    "timestamp": datetime.now().isoformat()
+                }
+                post_traffic_update(traffic_snapshot)
+
+                # --- Send joint alerts if critical issues detected ---
+                for issue in situation_analysis['critical_issues']:
+                    if issue['type'] == 'severe_congestion':
+                        joint_alert = {
+                            "type": "joint.alert",
+                            "message": f"Severe congestion detected at {issue['location']}.",
+                            "action_needed": ["Adjust signal timing", "Notify public"],
+                            "linked_assets": issue['location'],
+                            "timestamp": datetime.now().isoformat()
+                        }
+                        post_joint_alert(joint_alert)
+                    elif issue['type'] == 'incident_impact':
+                        joint_alert = {
+                            "type": "joint.alert",
+                            "message": "Incident impact detected.",
+                            "action_needed": ["Suggest alternate routes", "Notify authorities"],
+                            "linked_assets": issue.get('affected_areas', []),
+                            "timestamp": datetime.now().isoformat()
+                        }
+                        post_joint_alert(joint_alert)
             except Exception as e:
                 print(f"Error in agent loop: {e}")
             time.sleep(120)

@@ -3,472 +3,1400 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart City Dashboard</title>
+    <title>Svatantra-Nagari Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/leaflet@1.7.1/dist/leaflet.css" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            --primary-color: #2c5282;
+            --success-color: #38a169;
+            --warning-color: #ed8936;
+            --danger-color: #e53e3e;
+            --dark-bg: #1a202c;
+            --card-bg: #2d3748;
         }
-        
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            color: #333;
-        }
-        
-        .dashboard-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            grid-template-rows: auto 1fr 1fr;
-            gap: 20px;
-            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             min-height: 100vh;
         }
-        
-        .header {
-            grid-column: 1 / -1;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 20px;
-            border-radius: 15px;
+
+        .dashboard-header {
+            background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 1rem 0;
+            margin-bottom: 2rem;
         }
-        
-        .agent-panel {
+
+        .card {
             background: rgba(255, 255, 255, 0.95);
-            border-radius: 15px;
-            padding: 20px;
             backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            overflow-y: auto;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            margin-bottom: 1.5rem;
         }
-        
-        .panel-title {
-            font-size: 1.4em;
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .metric-card {
+            text-align: center;
+            padding: 1.5rem;
+        }
+
+        .metric-value {
+            font-size: 2.5rem;
             font-weight: bold;
-            margin-bottom: 15px;
-            color: #4a5568;
-            border-bottom: 2px solid #e2e8f0;
-            padding-bottom: 10px;
+            margin: 0.5rem 0;
+            transition: all 0.3s ease;
         }
-        
+
+        .metric-label {
+            color: #666;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
         .status-indicator {
-            display: inline-block;
             width: 12px;
             height: 12px;
             border-radius: 50%;
+            display: inline-block;
             margin-right: 8px;
+            transition: all 0.2s ease;
         }
-        
-        .status-active { background-color: #48bb78; }
-        .status-warning { background-color: #ed8936; }
-        .status-critical { background-color: #f56565; }
-        .status-inactive { background-color: #a0aec0; }
-        
-        .data-item {
-            margin: 10px 0;
-            padding: 10px;
-            background: rgba(255, 255, 255, 0.5);
-            border-radius: 8px;
-            border-left: 4px solid #4299e1;
-        }
-        
-        .alert-item {
-            margin: 10px 0;
-            padding: 12px;
-            border-radius: 8px;
-            border-left: 4px solid #f56565;
-            background: rgba(245, 101, 101, 0.1);
-        }
-        
-        .alert-critical { border-left-color: #f56565; background: rgba(245, 101, 101, 0.1); }
-        .alert-high { border-left-color: #ed8936; background: rgba(237, 137, 54, 0.1); }
-        .alert-medium { border-left-color: #ecc94b; background: rgba(236, 201, 75, 0.1); }
-        
-        .nav-buttons {
+
+        .status-good { background-color: var(--success-color); }
+        .status-warning { background-color: var(--warning-color); }
+        .status-critical { background-color: var(--danger-color); }
+
+        .progress-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
             display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-        
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            background: linear-gradient(135deg, #4299e1, #3182ce);
-            color: white;
-            cursor: pointer;
-            text-decoration: none;
-            font-weight: 500;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin: 0 auto 1rem;
             transition: all 0.3s ease;
         }
-        
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(66, 153, 225, 0.4);
+
+        .chart-container {
+            height: 300px;
+            position: relative;
         }
-        
-        .loading {
-            text-align: center;
-            color: #718096;
-            font-style: italic;
+
+        .alert-item {
+            border-left: 4px solid var(--danger-color);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: #fff5f5;
+            border-radius: 8px;
+            transition: all 0.2s ease;
         }
-        
-        .timestamp {
-            font-size: 0.9em;
-            color: #718096;
-            margin-left: auto;
+
+        .alert-item:hover {
+            background: #fef0f0;
+            transform: translateX(2px);
         }
-        
-        .metrics-grid {
+
+        .alert-time {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .sensor-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
+            gap: 1rem;
+            margin-top: 1rem;
         }
-        
-        .metric-card {
-            background: linear-gradient(135deg, #f7fafc, #edf2f7);
-            padding: 15px;
+
+        .sensor-item {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary-color);
+            transition: all 0.2s ease;
+        }
+
+        .sensor-item:hover {
+            background: #e9ecef;
+            transform: translateY(-1px);
+        }
+
+        .blinking {
+            animation: blink 2s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes dataUpdate {
+            0% { background-color: transparent; }
+            50% { background-color: rgba(45, 55, 72, 0.1); }
+            100% { background-color: transparent; }
+        }
+
+        .updating {
+            animation: dataUpdate 0.5s ease-in-out;
+        }
+
+        .critical-alert {
+            animation: pulse 2s infinite;
+        }
+
+        .energy-source {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid var(--success-color);
+            transition: all 0.2s ease;
+        }
+
+        .energy-source:hover {
+            background: #e9ecef;
+            transform: translateX(2px);
+        }
+
+        .map-container {
+            height: 400px;
             border-radius: 10px;
-            text-align: center;
-            border: 1px solid #e2e8f0;
+            overflow: hidden;
         }
-        
-        .metric-value {
-            font-size: 1.8em;
-            font-weight: bold;
-            color: #2d3748;
+
+        /* Loading states */
+        .loading {
+            position: relative;
+            overflow: hidden;
         }
-        
-        .metric-label {
-            font-size: 0.9em;
-            color: #718096;
-            margin-top: 5px;
+
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        /* Real-time indicators */
+        .live-indicator {
+            background: #dc3545;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            animation: pulse 2s infinite;
+        }
+
+        .system-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Enhanced metric cards */
+        .metric-card .trend-arrow {
+            font-size: 1.2rem;
+            margin-left: 8px;
+        }
+
+        .trend-up { color: var(--success-color); }
+        .trend-down { color: var(--danger-color); }
+        .trend-stable { color: #6c757d; }
+
+        /* Performance indicators */
+        .performance-meter {
+            height: 4px;
+            background: #e9ecef;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .performance-fill {
+            height: 100%;
+            transition: width 0.5s ease;
+        }
+
+        /* Enhanced alerts */
+        .alert-priority-critical {
+            border-left-color: var(--danger-color);
+            background: #fff5f5;
+        }
+
+        .alert-priority-high {
+            border-left-color: var(--warning-color);
+            background: #fffbeb;
+        }
+
+        .alert-priority-medium {
+            border-left-color: #3b82f6;
+            background: #eff6ff;
+        }
+
+        /* AI status indicators */
+        .ai-agent-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .ai-agent-active {
+            background: rgba(56, 161, 105, 0.1);
+            border: 1px solid var(--success-color);
+        }
+
+        .ai-agent-inactive {
+            background: rgba(229, 62, 62, 0.1);
+            border: 1px solid var(--danger-color);
         }
     </style>
 </head>
 <body>
-    <div class="dashboard-container">
-        <!-- Header -->
-        <div class="header">
-            <h1>🏙️ Smart City Dashboard</h1>
-            <p>Real-time monitoring of environmental, infrastructure, and traffic systems</p>
-            <div class="nav-buttons">
-                <a href="/3d-city" class="btn">🌆 3D City View</a>
-                <button class="btn" onclick="refreshAllData()">🔄 Refresh Data</button>
+    <header class="dashboard-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h1 class="mb-0">
+                        <i class="fas fa-city me-2"></i>Svatantra-Nagari AI Dashboard
+                        <span class="live-indicator">LIVE</span>
+                    </h1>
+                    <p class="mb-0 opacity-75">Real-time monitoring and AI analysis</p>
+                </div>
+                <div class="col-md-6 text-end">
+                    <div class="d-flex justify-content-end align-items-center">
+                        <div class="me-4 system-status">
+                            <div class="ai-agent-status ai-agent-active" id="env-agent-status">
+                                <i class="fas fa-leaf"></i>
+                                <small>Environmental AI</small>
+                            </div>
+                            <div class="ai-agent-status ai-agent-active" id="infra-agent-status">
+                                <i class="fas fa-bridge"></i>
+                                <small>Infrastructure AI</small>
+                            </div>
+                            <div class="ai-agent-status ai-agent-active" id="traffic-agent-status">
+                                <i class="fas fa-traffic-light"></i>
+                                <small>Traffic AI</small>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <div id="current-time" class="fw-bold"></div>
+                            <small>Last Update: <span id="last-update">Just now</span></small>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-        
-        <!-- Environmental Agent Panel -->
-        <div class="agent-panel">
-            <div class="panel-title">
-                <span class="status-indicator status-inactive" id="env-status"></span>
-                🌱 Environmental Agent
+    </header>
+
+    <div class="container-fluid">
+        <!-- Enhanced System Overview Row -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card metric-card">
+                    <div class="progress-circle environmental-circle" style="background: conic-gradient(var(--success-color) 0deg 252deg, #e2e8f0 252deg 360deg);">
+                        70%
+                    </div>
+                    <div class="metric-label">Environmental Health</div>
+                    <div class="mt-2">
+                        <span class="status-indicator status-warning"></span>
+                        <small id="env-status-text">3 Districts Above Threshold</small>
+                        <span class="trend-arrow trend-stable"><i class="fas fa-minus"></i></span>
+                    </div>
+                    <div class="performance-meter">
+                        <div class="performance-fill bg-warning" style="width: 70%"></div>  
+                    </div>
+                </div>
             </div>
-            <div id="environmental-content" class="loading">Loading environmental data...</div>
+            <div class="col-md-4">
+                <div class="card metric-card">
+                    <div class="progress-circle infrastructure-circle" style="background: conic-gradient(var(--warning-color) 0deg 216deg, #e2e8f0 216deg 360deg);">
+                        60%
+                    </div>
+                    <div class="metric-label">Infrastructure Health</div>
+                    <div class="mt-2">
+                        <span class="status-indicator status-warning"></span>
+                        <small id="infra-status-text">Bridge Strain Alert</small>
+                        <span class="trend-arrow trend-down"><i class="fas fa-arrow-down"></i></span>
+                    </div>
+                    <div class="performance-meter">
+                        <div class="performance-fill bg-warning" style="width: 60%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card metric-card">
+                    <div class="progress-circle traffic-circle" style="background: conic-gradient(var(--danger-color) 0deg 306deg, #e2e8f0 306deg 360deg);">
+                        85%
+                    </div>
+                    <div class="metric-label">Traffic Congestion</div>
+                    <div class="mt-2">
+                        <span class="status-indicator status-critical blinking"></span>
+                        <small id="traffic-status-text">Severe Congestion Downtown</small>
+                        <span class="trend-arrow trend-up"><i class="fas fa-arrow-up"></i></span>
+                    </div>
+                    <div class="performance-meter">
+                        <div class="performance-fill bg-danger" style="width: 85%"></div>
+                    </div>
+                </div>
+            </div>
         </div>
-        
-        <!-- Infrastructure Agent Panel -->
-        <div class="agent-panel">
-            <div class="panel-title">
-                <span class="status-indicator status-inactive" id="infra-status"></span>
-                🏗️ Infrastructure Health
+
+        <!-- Enhanced Environmental Monitoring -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-leaf me-2 text-success"></i>Air Quality Status
+                            <span class="live-indicator ms-2">LIVE</span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="sensor-grid">
+                            <div class="sensor-item" data-district="Downtown">
+                                <div class="d-flex justify-content-between">
+                                    <strong>Downtown</strong>
+                                    <span class="badge bg-danger">Critical</span>
+                                </div>
+                                <div class="mt-2">
+                                    <small>PM2.5: <strong class="pm25-value">38.0 µg/m³</strong></small><br>
+                                    <small>NO2: <strong class="no2-value">52.0 µg/m³</strong></small><br>
+                                    <small>CO: <strong class="co-value">8.2 ppm</strong></small>
+                                </div>
+                            </div>
+                            <div class="sensor-item" data-district="Northside">
+                                <div class="d-flex justify-content-between">
+                                    <strong>Northside</strong>
+                                    <span class="badge bg-success">Good</span>
+                                </div>
+                                <div class="mt-2">
+                                    <small>PM2.5: <strong class="pm25-value">18.0 µg/m³</strong></small><br>
+                                    <small>NO2: <strong class="no2-value">28.0 µg/m³</strong></small><br>
+                                    <small>CO: <strong class="co-value">4.5 ppm</strong></small>
+                                </div>
+                            </div>
+                            <div class="sensor-item" data-district="Eastport">
+                                <div class="d-flex justify-content-between">
+                                    <strong>Eastport</strong>
+                                    <span class="badge bg-warning">Moderate</span>
+                                </div>
+                                <div class="mt-2">
+                                    <small>PM2.5: <strong class="pm25-value">42.0 µg/m³</strong></small><br>
+                                    <small>NO2: <strong class="no2-value">47.0 µg/m³</strong></small><br>
+                                    <small>CO: <strong class="co-value">9.1 ppm</strong></small>
+                                </div>
+                            </div>
+                            <div class="sensor-item" data-district="Westview">
+                                <div class="d-flex justify-content-between">
+                                    <strong>Westview</strong>
+                                    <span class="badge bg-success">Good</span>
+                                </div>
+                                <div class="mt-2">
+                                    <small>PM2.5: <strong class="pm25-value">13.0 µg/m³</strong></small><br>
+                                    <small>NO2: <strong class="no2-value">23.0 µg/m³</strong></small><br>
+                                    <small>CO: <strong class="co-value">3.8 ppm</strong></small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div id="infrastructure-content" class="loading">Loading infrastructure data...</div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-bolt me-2 text-warning"></i>Energy Grid Optimization
+                            <span class="live-indicator ms-2">AUTO</span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="energy-source" data-energy="Solar">
+                            <div>
+                                <i class="fas fa-sun text-warning me-2"></i>
+                                <strong>Solar</strong>
+                            </div>
+                            <div class="text-end">
+                                <div><strong class="output-value">78 MW</strong></div>
+                                <small class="text-muted efficiency-value">98% capacity</small>
+                            </div>
+                        </div>
+                        <div class="energy-source" data-energy="Wind">
+                            <div>
+                                <i class="fas fa-wind text-info me-2"></i>
+                                <strong>Wind</strong>
+                            </div>
+                            <div class="text-end">
+                                <div><strong class="output-value">42 MW</strong></div>
+                                <small class="text-muted efficiency-value">84% capacity</small>
+                            </div>
+                        </div>
+                        <div class="energy-source" data-energy="Coal" style="border-left-color: var(--danger-color);">
+                            <div>
+                                <i class="fas fa-fire text-dark me-2"></i>
+                                <strong>Coal</strong>
+                            </div>
+                            <div class="text-end">
+                                <div><strong class="output-value">0 MW</strong></div>
+                                <small class="text-success efficiency-value">Optimized out</small>
+                            </div>
+                        </div>
+                        <div class="energy-source" data-energy="Natural Gas">
+                            <div>
+                                <i class="fas fa-flame text-primary me-2"></i>
+                                <strong>Natural Gas</strong>
+                            </div>
+                            <div class="text-end">
+                                <div><strong class="output-value">130 MW</strong></div>
+                                <small class="text-muted efficiency-value">87% capacity</small>
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="d-flex justify-content-between">
+                            <strong>Total Generation:</strong>
+                            <strong class="text-success" id="total-generation">250 MW</strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <strong>Current Demand:</strong>
+                            <strong id="current-demand">250 MW</strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <strong>Grid Efficiency:</strong>
+                            <strong class="text-info" id="grid-efficiency">94.2%</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        
-        <!-- Traffic Agent Panel -->
-        <div class="agent-panel">
-            <div class="panel-title">
-                <span class="status-indicator status-inactive" id="traffic-status"></span>
-                🚦 Traffic Management
+
+        <!-- Enhanced Infrastructure & Traffic Row -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-bridge me-2 text-info"></i>Infrastructure Health
+                            <span class="live-indicator ms-2">MONITOR</span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-warning">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>Main Bridge Strain Alert</strong><br>
+                                    <small>SG001 - Main Girder Midspan</small>
+                                </div>
+                                <div class="text-end">
+                                    <div class="fw-bold bridge-strain-value">285 µstrain</div>
+                                    <small class="text-muted">Threshold: 250</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-6">
+                                <h6>Vibration Analysis</h6>
+                                <div class="sensor-item">
+                                    <small>Mode 1: <strong class="vibration-mode1">2.43 Hz</strong></small><br>
+                                    <small>Mode 2: <strong>4.78 Hz</strong></small><br>
+                                    <small>Damping: <strong>2.8%</strong></small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <h6>Load Monitoring</h6>
+                                <div class="sensor-item">
+                                    <small>Vehicles: <strong id="bridge-vehicles">15</strong></small><br>
+                                    <small>Total Load: <strong>165 kN</strong></small><br>
+                                    <small>Max Axle: <strong>42 kN</strong></small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <div class="d-flex justify-content-between">
+                                <small>Overall Health Score:</small>
+                                <small class="fw-bold text-warning health-score-value">Fair (65%)</small>
+                            </div>
+                            <div class="progress mt-1">
+                                <div class="progress-bar bg-warning" style="width: 65%" id="health-progress"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div id="traffic-content" class="loading">Loading traffic data...</div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-traffic-light me-2 text-primary"></i>Traffic Management
+                            <span class="live-indicator ms-2">ACTIVE</span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-danger critical-alert">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>Severe Congestion Alert</strong><br>
+                                    <small>Main St & 1st Ave</small>
+                                </div>
+                                <div class="text-end">
+                                    <div class="fw-bold">92% Congestion</div>
+                                    <small class="text-muted">Estimated delay: 12 min</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="sensor-grid">
+                            <div class="sensor-item" data-sensor="TS001" style="border-left-color: var(--danger-color);">
+                                <div class="d-flex justify-content-between">
+                                    <strong>TS001</strong>
+                                    <span class="badge bg-danger">Critical</span>
+                                </div>
+                                <small>Vehicles: <strong class="vehicle-count">912</strong></small><br>
+                                <small>Speed: <strong class="speed-value">8.5 km/h</strong></small>
+                            </div>
+                            <div class="sensor-item" data-sensor="TS002" style="border-left-color: var(--warning-color);">
+                                <div class="d-flex justify-content-between">
+                                    <strong>TS002</strong>
+                                    <span class="badge bg-warning">Moderate</span>
+                                </div>
+                                <small>Vehicles: <strong class="vehicle-count">345</strong></small><br>
+                                <small>Speed: <strong class="speed-value">68.0 km/h</strong></small>
+                            </div>
+                            <div class="sensor-item" data-sensor="TS003">
+                                <div class="d-flex justify-content-between">
+                                    <strong>TS003</strong>
+                                    <span class="badge bg-success">Good</span>
+                                </div>
+                                <small>Vehicles: <strong class="vehicle-count">156</strong></small><br>
+                                <small>Speed: <strong class="speed-value">52.0 km/h</strong></small>
+                            </div>
+                            <div class="sensor-item" data-sensor="TS004">
+                                <div class="d-flex justify-content-between">
+                                    <strong>TS004</strong>
+                                    <span class="badge bg-success">Good</span>
+                                </div>
+                                <small>Vehicles: <strong class="vehicle-count">198</strong></small><br>
+                                <small>Speed: <strong class="speed-value">47.0 km/h</strong></small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        
-        <!-- System Status Panel -->
-        <div class="agent-panel">
-            <div class="panel-title">
-                <span class="status-indicator status-active"></span>
-                📊 System Status
+
+        <!-- Enhanced AI Predictions & Actions -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-robot me-2 text-primary"></i>AI Predictions & Recommendations
+                            <span class="live-indicator ms-2">AI</span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <h6 class="text-success">Environmental AI</h6>
+                                <ul class="list-unstyled environmental-ai">
+                                    <li><i class="fas fa-check-circle text-success me-2"></i>PM2.5 levels predicted to decrease by 15% in next 2 hours</li>
+                                    <li><i class="fas fa-lightbulb text-warning me-2"></i>Recommend increasing solar capacity by 10 MW</li>
+                                    <li><i class="fas fa-exclamation-triangle text-warning me-2"></i>Wind conditions favorable for next 6 hours</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-4">
+                                <h6 class="text-info">Infrastructure AI</h6>
+                                <ul class="list-unstyled infrastructure-ai">
+                                    <li><i class="fas fa-wrench text-danger me-2"></i>Schedule inspection for SG001 sensor within 48 hours</li>
+                                    <li><i class="fas fa-chart-line text-success me-2"></i>Fatigue analysis shows 15 years remaining life</li>
+                                    <li><i class="fas fa-shield-alt text-success me-2"></i>Overall structural integrity: 85%</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-4">
+                                <h6 class="text-primary">Traffic AI</h6>
+                                <ul class="list-unstyled traffic-ai">
+                                    <li><i class="fas fa-route text-danger me-2"></i>Suggest alternate route via Highway 101</li>
+                                    <li><i class="fas fa-clock text-warning me-2"></i>Adjust signal timing: +15s green phase</li>
+                                    <li><i class="fas fa-mobile-alt text-info me-2"></i>Notify 2,450 mobile users about delays</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div id="system-content" class="loading">Loading system status...</div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-bell me-2 text-danger"></i>Recent Alerts
+                            <span class="badge bg-danger ms-2" id="alert-count">3</span>
+                        </h5>
+                    </div>
+                    <div class="card-body alerts-container" style="max-height: 300px; overflow-y: auto;">
+                        <div class="alert-item alert-priority-critical">
+                            <div class="fw-bold text-danger">Traffic Congestion Critical</div>
+                            <div class="alert-time">2 minutes ago</div>
+                            <small>Main St & 1st Ave intersection experiencing severe delays</small>
+                        </div>
+                        <div class="alert-item alert-priority-high">
+                            <div class="fw-bold text-warning">Infrastructure Warning</div>
+                            <div class="alert-time">8 minutes ago</div>
+                            <small>Bridge strain sensor SG001 exceeded normal threshold</small>
+                        </div>
+                        <div class="alert-item alert-priority-high">
+                            <div class="fw-bold text-warning">Air Quality Alert</div>
+                            <div class="alert-time">15 minutes ago</div>
+                            <small>PM2.5 levels elevated in Downtown and Eastport districts</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        
-        <!-- Joint Alerts Panel -->
-        <div class="agent-panel">
-            <div class="panel-title">
-                <span class="status-indicator status-warning"></span>
-                🚨 Joint Alerts
+
+        <!-- Enhanced System Performance -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-tachometer-alt me-2 text-success"></i>System Performance & Analytics
+                            <span class="live-indicator ms-2">MONITOR</span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="metric-card">
+                                    <div class="metric-value text-success" id="sensors-active">156</div>
+                                    <div class="metric-label">Total Sensors Active</div>
+                                    <div class="performance-meter">
+                                        <div class="performance-fill bg-success" style="width: 98%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="metric-card">
+                                    <div class="metric-value text-info" id="response-time">2.3s</div>
+                                    <div class="metric-label">Avg Response Time</div>
+                                    <div class="performance-meter">
+                                        <div class="performance-fill bg-info" style="width: 85%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="metric-card">
+                                    <div class="metric-value text-warning" id="system-uptime">99.7%</div>
+                                    <div class="metric-label">System Uptime</div>
+                                    <div class="performance-meter">
+                                        <div class="performance-fill bg-warning" style="width: 99.7%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="metric-card">
+                                    <div class="metric-value text-primary" id="data-points">47,892</div>
+                                    <div class="metric-label">Data Points/Hour</div>
+                                    <div class="performance-meter">
+                                        <div class="performance-fill bg-primary" style="width: 92%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div id="alerts-content" class="loading">Loading alerts...</div>
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        // Dashboard JavaScript functionality
-        let refreshInterval;
-        
-        function updateEnvironmentalData(data) {
-            const content = document.getElementById('environmental-content');
-            const status = document.getElementById('env-status');
-            
-            if (!data || Object.keys(data).length === 0) {
-                content.innerHTML = '<div class="loading">No environmental data available</div>';
-                status.className = 'status-indicator status-inactive';
-                return;
+        // Enhanced Real-time Data Simulation
+        class EnhancedSmartCityDashboard {
+            constructor() {
+                this.sensors = {
+                    airQuality: {
+                        'Downtown': { pm25: 38, no2: 52, co: 8.2, trend: 'increasing' },
+                        'Northside': { pm25: 18, no2: 28, co: 4.5, trend: 'stable' },
+                        'Eastport': { pm25: 42, no2: 47, co: 9.1, trend: 'decreasing' },
+                        'Westview': { pm25: 13, no2: 23, co: 3.8, trend: 'stable' }
+                    },
+                    traffic: {
+                        'TS001': { vehicles: 912, speed: 8.5, congestion: 0.92, status: 'critical' },
+                        'TS002': { vehicles: 345, speed: 68, congestion: 0.35, status: 'moderate' },
+                        'TS003': { vehicles: 156, speed: 52, congestion: 0.25, status: 'good' },
+                        'TS004': { vehicles: 198, speed: 47, congestion: 0.28, status: 'good' }
+                    },
+                    energy: {
+                        'Solar': { output: 78, capacity: 80, efficiency: 0.98, trend: 'up' },
+                        'Wind': { output: 42, capacity: 50, efficiency: 0.84, trend: 'stable' },
+                        'Natural Gas': { output: 130, capacity: 150, efficiency: 0.87, trend: 'down' },
+                        'Coal': { output: 0, capacity: 200, efficiency: 0, trend: 'stable' }
+                    },
+                    infrastructure: {
+                        bridgeStrain: 285,
+                        vibrationMode1: 2.43,
+                        loadVehicles: 15,
+                        healthScore: 65
+                    }
+                };
+                
+                this.alerts = [];
+                this.predictions = {
+                    pm25Decrease: 15,
+                    trafficCongestion: 'increasing',
+                    energyDemand: 250
+                };
+
+                this.systemMetrics = {
+                    sensorsActive: 156,
+                    responseTime: 2.3,
+                    systemUptime: 99.7,
+                    dataPoints: 47892
+                };
+
+                this.agentStatus = {
+                    environmental: true,
+                    infrastructure: true,
+                    traffic: true
+                };
+                
+                this.initializeDashboard();
             }
-            
-            status.className = 'status-indicator status-active';
-            
-            let html = '';
-            
-            // Air Quality Data
-            if (data.air_quality) {
-                html += '<h4>Air Quality Status:</h4>';
-                data.air_quality.forEach(district => {
-                    const isHotspot = data.hotspots && data.hotspots.includes(district.district);
-                    html += `
-                        <div class="data-item ${isHotspot ? 'alert-critical' : ''}">
-                            <strong>${district.district}:</strong><br>
-                            PM2.5: ${district.pm25.toFixed(1)} µg/m³<br>
-                            NO2: ${district.no2.toFixed(1)} µg/m³<br>
-                            CO: ${district.co.toFixed(1)} ppm
-                            ${isHotspot ? '<br><strong style="color: red;">⚠️ HOTSPOT</strong>' : ''}
-                        </div>
-                    `;
+
+            initializeDashboard() {
+                console.log('🚀 Initializing Enhanced Smart City Dashboard...');
+                
+                // Start time updates
+                this.updateTime();
+                setInterval(() => this.updateTime(), 1000);
+                
+                // Start main update cycle
+                setInterval(() => this.updateAllSystems(), 8000); // Every 8 seconds
+                
+                // Update alerts periodically
+                setInterval(() => this.updateAlerts(), 25000); // Every 25 seconds
+                
+                // Update predictions
+                setInterval(() => this.updatePredictions(), 90000); // Every 1.5 minutes
+                
+                // Update system metrics
+                setInterval(() => this.updateSystemMetrics(), 12000); // Every 12 seconds
+                
+                // Add interactive effects
+                this.addInteractiveEffects();
+                
+                // Initial data load
+                this.updateAllSystems();
+                
+                console.log('✅ Enhanced Dashboard Initialized');
+                console.log('🤖 AI Agents: Environmental, Infrastructure, and Traffic are now active');
+                console.log('📊 Real-time data simulation running...');
+            }
+
+            updateTime() {
+                const now = new Date();
+                const timeString = now.toLocaleString('en-US', {
+                    weekday: 'short',
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
                 });
-            }
-            
-            // Energy Allocation
-            if (data.energy_allocation) {
-                html += '<h4>Energy Grid:</h4>';
-                for (const [source, allocation] of Object.entries(data.energy_allocation)) {
-                    html += `
-                        <div class="data-item">
-                            ${source}: ${allocation ? allocation.toFixed(1) : 0} MW
-                        </div>
-                    `;
+                
+                const timeElement = document.getElementById('current-time');
+                if (timeElement) {
+                    timeElement.textContent = timeString;
+                }
+                
+                // Update last update time with realistic intervals
+                const lastUpdateElement = document.getElementById('last-update');
+                if (lastUpdateElement) {
+                    const seconds = Math.floor(Math.random() * 15) + 3; // 3-18 seconds
+                    lastUpdateElement.textContent = `${seconds}s ago`;
                 }
             }
-            
-            content.innerHTML = html;
-        }
-        
-        function updateInfrastructureData(data) {
-            const content = document.getElementById('infrastructure-content');
-            const status = document.getElementById('infra-status');
-            
-            if (!data || Object.keys(data).length === 0) {
-                content.innerHTML = '<div class="loading">No infrastructure data available</div>';
-                status.className = 'status-indicator status-inactive';
-                return;
-            }
-            
-            const criticalConcerns = data.bridge_health?.concerns?.filter(c => c.severity === 'critical') || [];
-            status.className = criticalConcerns.length > 0 ? 'status-indicator status-critical' : 'status-indicator status-active';
-            
-            let html = '';
-            
-            if (data.bridge_health) {
-                html += `<h4>Bridge Health Status:</h4>`;
-                html += `
-                    <div class="metrics-grid">
-                        <div class="metric-card">
-                            <div class="metric-value">${data.bridge_health.concerns?.length || 0}</div>
-                            <div class="metric-label">Total Concerns</div>
-                        </div>
-                        <div class="metric-card">
-                            <div class="metric-value">${criticalConcerns.length}</div>
-                            <div class="metric-label">Critical Issues</div>
-                        </div>
-                    </div>
-                `;
+
+            updateAllSystems() {
+                this.updateAirQuality();
+                this.updateTrafficFlow();
+                this.updateEnergyGrid();
+                this.updateInfrastructure();
+                this.updateDashboardVisuals();
+                this.updateAgentStatus();
                 
-                if (data.bridge_health.concerns && data.bridge_health.concerns.length > 0) {
-                    html += '<h4>Recent Concerns:</h4>';
-                    data.bridge_health.concerns.slice(-5).forEach(concern => {
-                        html += `
-                            <div class="data-item alert-${concern.severity}">
-                                <strong>${concern.type}:</strong> ${concern.location}<br>
-                                Severity: ${concern.severity}<br>
-                                <small>Detected: ${new Date(concern.detected_at).toLocaleString()}</small>
-                            </div>
-                        `;
+                console.log('🔄 All systems updated:', new Date().toLocaleTimeString());
+            }
+
+            updateAirQuality() {
+                const hour = new Date().getHours();
+                const isRushHour = (hour >= 7 && hour <= 9) || (hour >= 17 && hour <= 19);
+                
+                Object.keys(this.sensors.airQuality).forEach(district => {
+                    const sensor = this.sensors.airQuality[district];
+                    
+                    // Simulate realistic fluctuations
+                    const rushFactor = isRushHour ? 1.3 : 0.9;
+                    const randomFactor = 0.9 + Math.random() * 0.2;
+                    
+                    sensor.pm25 += (Math.random() - 0.5) * 4 * rushFactor;
+                    sensor.no2 += (Math.random() - 0.5) * 5 * rushFactor;
+                    sensor.co += (Math.random() - 0.5) * 1.0 * rushFactor;
+                    
+                    // Keep values realistic
+                    sensor.pm25 = Math.max(5, Math.min(65, sensor.pm25));
+                    sensor.no2 = Math.max(10, Math.min(85, sensor.no2));
+                    sensor.co = Math.max(1, Math.min(18, sensor.co));
+                    
+                    // Update trend
+                    const prevPm25 = sensor.pm25;
+                    sensor.trend = sensor.pm25 > 35 ? 'increasing' : 
+                                  sensor.pm25 < 20 ? 'decreasing' : 'stable';
+                });
+            }
+
+            updateTrafficFlow() {
+                const hour = new Date().getHours();
+                const dayOfWeek = new Date().getDay();
+                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+                const isRushHour = (hour >= 7 && hour <= 9) || (hour >= 17 && hour <= 19);
+                
+                Object.keys(this.sensors.traffic).forEach(sensorId => {
+                    const sensor = this.sensors.traffic[sensorId];
+                    
+                    let baseFactor = 1.0;
+                    if (isWeekend) baseFactor *= 0.7;
+                    if (isRushHour) baseFactor *= 1.5;
+                    if (hour >= 22 || hour <= 5) baseFactor *= 0.3;
+                    
+                    // Simulate traffic incidents for TS001 (keep high congestion)
+                    if (sensorId === 'TS001') {
+                        sensor.vehicles = Math.max(850, sensor.vehicles + (Math.random() - 0.5) * 80);
+                        sensor.speed = Math.max(5, Math.min(18, sensor.speed + (Math.random() - 0.5) * 3));
+                        sensor.congestion = Math.min(0.98, sensor.vehicles / 1000);
+                    } else {
+                        sensor.vehicles = Math.max(15, sensor.vehicles + (Math.random() - 0.5) * 30 * baseFactor);
+                        sensor.speed = Math.max(15, Math.min(85, sensor.speed + (Math.random() - 0.5) * 8));
+                        sensor.congestion = Math.min(0.9, sensor.vehicles / 1200);
+                    }
+                    
+                    // Update status based on congestion
+                    sensor.status = sensor.congestion > 0.8 ? 'critical' :
+                                   sensor.congestion > 0.5 ? 'moderate' : 'good';
+                });
+            }
+
+            updateEnergyGrid() {
+                const hour = new Date().getHours();
+                const month = new Date().getMonth();
+                
+                // Solar varies with time of day and season
+                let solarEfficiency = 0;
+                if (hour >= 6 && hour <= 18) {
+                    solarEfficiency = Math.sin((hour - 6) * Math.PI / 12);
+                    // Seasonal adjustment
+                    const seasonalFactor = month >= 4 && month <= 8 ? 1.2 : 0.8;
+                    solarEfficiency *= seasonalFactor;
+                }
+                
+                this.sensors.energy.Solar.output = Math.max(0, 
+                    this.sensors.energy.Solar.capacity * solarEfficiency * (0.85 + Math.random() * 0.15));
+                this.sensors.energy.Solar.efficiency = this.sensors.energy.Solar.output / this.sensors.energy.Solar.capacity;
+                
+                // Wind varies more randomly with weather patterns
+                this.sensors.energy.Wind.output += (Math.random() - 0.5) * 8;
+                this.sensors.energy.Wind.output = Math.max(5, Math.min(50, this.sensors.energy.Wind.output));
+                this.sensors.energy.Wind.efficiency = this.sensors.energy.Wind.output / this.sensors.energy.Wind.capacity;
+                
+                // Natural gas compensates for renewable shortfall
+                const totalRenewable = this.sensors.energy.Solar.output + this.sensors.energy.Wind.output;
+                const demand = 250 + (Math.random() - 0.5) * 30; // Variable demand
+                this.sensors.energy['Natural Gas'].output = Math.max(0, demand - totalRenewable);
+                this.sensors.energy['Natural Gas'].efficiency = this.sensors.energy['Natural Gas'].output / this.sensors.energy['Natural Gas'].capacity;
+                
+                // Update trends
+                Object.keys(this.sensors.energy).forEach(source => {
+                    const energy = this.sensors.energy[source];
+                    const prevOutput = energy.output;
+                    energy.trend = Math.random() > 0.5 ? 'up' : Math.random() > 0.5 ? 'down' : 'stable';
+                });
+            }
+
+            updateInfrastructure() {
+                // Bridge strain varies with traffic load and environmental conditions
+                const totalTraffic = Object.values(this.sensors.traffic)
+                    .reduce((sum, sensor) => sum + sensor.vehicles, 0);
+                
+                const baseStrain = 200 + (totalTraffic / 60);
+                const weatherFactor = 1 + (Math.random() - 0.5) * 0.1; // Weather impact
+                this.sensors.infrastructure.bridgeStrain = baseStrain * weatherFactor + (Math.random() - 0.5) * 25;
+                
+                // Health score based on strain and vibration
+                const strainRatio = this.sensors.infrastructure.bridgeStrain / 400;
+                this.sensors.infrastructure.healthScore = Math.max(25, 100 - (strainRatio * 70));
+                
+                // Vibration frequency slightly decreases with damage/aging
+                this.sensors.infrastructure.vibrationMode1 = 2.45 - (strainRatio * 0.15) + (Math.random() - 0.5) * 0.03;
+                
+                // Load vehicles related to traffic
+                this.sensors.infrastructure.loadVehicles = Math.round(totalTraffic / 80);
+            }
+
+            updateDashboardVisuals() {
+                // Update air quality sensors
+                Object.entries(this.sensors.airQuality).forEach(([district, data]) => {
+                    const districtElement = document.querySelector(`[data-district="${district}"]`);
+                    if (districtElement) {
+                        const pm25Element = districtElement.querySelector('.pm25-value');
+                        const no2Element = districtElement.querySelector('.no2-value');
+                        const coElement = districtElement.querySelector('.co-value');
+                        
+                        if (pm25Element) pm25Element.textContent = `${data.pm25.toFixed(1)} µg/m³`;
+                        if (no2Element) no2Element.textContent = `${data.no2.toFixed(1)} µg/m³`;
+                        if (coElement) coElement.textContent = `${data.co.toFixed(1)} ppm`;
+                        
+                        // Update status badge
+                        const badge = districtElement.querySelector('.badge');
+                        if (badge) {
+                            if (data.pm25 > 35) {
+                                badge.className = 'badge bg-danger';
+                                badge.textContent = 'Critical';
+                            } else if (data.pm25 > 25) {
+                                badge.className = 'badge bg-warning';
+                                badge.textContent = 'Moderate';
+                            } else {
+                                badge.className = 'badge bg-success';
+                                badge.textContent = 'Good';
+                            }
+                        }
+                        
+                        // Add update animation
+                        districtElement.classList.add('updating');
+                        setTimeout(() => districtElement.classList.remove('updating'), 500);
+                    }
+                });
+                
+                // Update traffic sensors
+                Object.entries(this.sensors.traffic).forEach(([sensor, data]) => {
+                    const sensorElement = document.querySelector(`[data-sensor="${sensor}"]`);
+                    if (sensorElement) {
+                        const vehicleElement = sensorElement.querySelector('.vehicle-count');
+                        const speedElement = sensorElement.querySelector('.speed-value');
+                        
+                        if (vehicleElement) vehicleElement.textContent = Math.round(data.vehicles);
+                        if (speedElement) speedElement.textContent = `${data.speed.toFixed(1)} km/h`;
+                        
+                        const badge = sensorElement.querySelector('.badge');
+                        if (badge) {
+                            if (data.status === 'critical') {
+                                badge.className = 'badge bg-danger';
+                                badge.textContent = 'Critical';
+                                sensorElement.style.borderLeftColor = 'var(--danger-color)';
+                            } else if (data.status === 'moderate') {
+                                badge.className = 'badge bg-warning';
+                                badge.textContent = 'Moderate';
+                                sensorElement.style.borderLeftColor = 'var(--warning-color)';
+                            } else {
+                                badge.className = 'badge bg-success';
+                                badge.textContent = 'Good';
+                                sensorElement.style.borderLeftColor = 'var(--primary-color)';
+                            }
+                        }
+                    }
+                });
+                
+                // Update energy grid
+                Object.entries(this.sensors.energy).forEach(([source, data]) => {
+                    const sourceElement = document.querySelector(`[data-energy="${source}"]`);
+                    if (sourceElement) {
+                        const outputElement = sourceElement.querySelector('.output-value');
+                        const efficiencyElement = sourceElement.querySelector('.efficiency-value');
+                        
+                        if (outputElement) outputElement.textContent = `${Math.round(data.output)} MW`;
+                        if (efficiencyElement) {
+                            if (source === 'Coal') {
+                                efficiencyElement.textContent = 'Optimized out';
+                            } else {
+                                efficiencyElement.textContent = `${Math.round(data.efficiency * 100)}% capacity`;
+                            }
+                        }
+                    }
+                });
+                
+                // Update infrastructure values
+                const strainElement = document.querySelector('.bridge-strain-value');
+                if (strainElement) strainElement.textContent = `${Math.round(this.sensors.infrastructure.bridgeStrain)} µstrain`;
+                
+                const healthElement = document.querySelector('.health-score-value');
+                const healthProgress = document.getElementById('health-progress');
+                if (healthElement && healthProgress) {
+                    const score = Math.round(this.sensors.infrastructure.healthScore);
+                    healthElement.textContent = `${this.getHealthLabel(score)} (${score}%)`;
+                    healthProgress.style.width = `${score}%`;
+                    
+                    // Update progress bar color
+                    healthProgress.className = score > 80 ? 'progress-bar bg-success' :
+                                             score > 60 ? 'progress-bar bg-warning' : 'progress-bar bg-danger';
+                }
+                
+                const vibrationElement = document.querySelector('.vibration-mode1');
+                if (vibrationElement) vibrationElement.textContent = `${this.sensors.infrastructure.vibrationMode1.toFixed(2)} Hz`;
+                
+                const vehiclesElement = document.getElementById('bridge-vehicles');
+                if (vehiclesElement) vehiclesElement.textContent = this.sensors.infrastructure.loadVehicles;
+                
+                // Update progress circles
+                this.updateProgressCircles();
+                
+                // Update totals
+                this.updateEnergyTotals();
+            }
+
+            getHealthLabel(score) {
+                if (score > 80) return 'Excellent';
+                if (score > 70) return 'Good';
+                if (score > 60) return 'Fair';
+                if (score > 40) return 'Poor';
+                return 'Critical';
+            }
+
+            updateProgressCircles() {
+                const environmentalHealth = this.calculateEnvironmentalHealth();
+                const infrastructureHealth = this.sensors.infrastructure.healthScore;
+                const trafficCongestion = this.calculateTrafficCongestion();
+                
+                this.updateProgressCircle('.environmental-circle', environmentalHealth, 'Environmental');
+                this.updateProgressCircle('.infrastructure-circle', infrastructureHealth, 'Infrastructure');  
+                this.updateProgressCircle('.traffic-circle', trafficCongestion, 'Traffic');
+            }
+
+            updateProgressCircle(selector, percentage, type) {
+                const circle = document.querySelector(selector);
+                if (circle) {
+                    const degrees = (percentage / 100) * 360;
+                    let color = 'var(--success-color)';
+                    
+                    if (type === 'Traffic') {
+                        // For traffic, higher percentage means worse (more congestion)
+                        color = percentage > 80 ? 'var(--danger-color)' :
+                               percentage > 60 ? 'var(--warning-color)' : 'var(--success-color)';
+                    } else {
+                        // For others, higher percentage means better
+                        color = percentage > 80 ? 'var(--success-color)' :
+                               percentage > 60 ? 'var(--warning-color)' : 'var(--danger-color)';
+                    }
+                    
+                    circle.style.background = `conic-gradient(${color} 0deg ${degrees}deg, #e2e8f0 ${degrees}deg 360deg)`;
+                    circle.textContent = `${Math.round(percentage)}%`;
+                }
+            }
+
+            calculateEnvironmentalHealth() {
+                const avgPM25 = Object.values(this.sensors.airQuality)
+                    .reduce((sum, sensor) => sum + sensor.pm25, 0) / 4;
+                return Math.max(20, 100 - (avgPM25 / 55 * 80));
+            }
+
+            calculateTrafficCongestion() {
+                const avgCongestion = Object.values(this.sensors.traffic)
+                    .reduce((sum, sensor) => sum + sensor.congestion, 0) / 4;
+                return Math.min(98, avgCongestion * 100);
+            }
+
+            updateEnergyTotals() {
+                const totalGeneration = Object.values(this.sensors.energy)
+                    .reduce((sum, source) => sum + source.output, 0);
+                const currentDemand = totalGeneration + (Math.random() - 0.5) * 10;
+                const efficiency = (totalGeneration / (totalGeneration + 15)) * 100;
+                
+                const totalGenElement = document.getElementById('total-generation');
+                const currentDemandElement = document.getElementById('current-demand');
+                const gridEfficiencyElement = document.getElementById('grid-efficiency');
+                
+                if (totalGenElement) totalGenElement.textContent = `${Math.round(totalGeneration)} MW`;
+                if (currentDemandElement) currentDemandElement.textContent = `${Math.round(currentDemand)} MW`;
+                if (gridEfficiencyElement) gridEfficiencyElement.textContent = `${efficiency.toFixed(1)}%`;
+            }
+
+            updateAlerts() {
+                this.alerts = [];
+                
+                // Air quality alerts
+                Object.entries(this.sensors.airQuality).forEach(([district, data]) => {
+                    if (data.pm25 > 35) {
+                        this.alerts.push({
+                            type: 'Air Quality Alert',
+                            message: `PM2.5 levels elevated in ${district} district`,
+                            severity: data.pm25 > 50 ? 'critical' : 'high',
+                            time: this.getRandomTime(),
+                            priority: data.pm25 > 50 ? 'critical' : 'high'
+                        });
+                    }
+                });
+                
+                // Traffic alerts
+                Object.entries(this.sensors.traffic).forEach(([sensor, data]) => {
+                    if (data.congestion > 0.8) {
+                        this.alerts.push({
+                            type: 'Traffic Congestion Critical',
+                            message: `Severe delays at ${sensor} sensor location`,
+                            severity: 'critical',
+                            time: this.getRandomTime(),
+                            priority: 'critical'
+                        });
+                    }
+                });
+                
+                // Infrastructure alerts
+                if (this.sensors.infrastructure.bridgeStrain > 280) {
+                    this.alerts.push({
+                        type: 'Infrastructure Warning',
+                        message: 'Bridge strain sensor exceeded normal threshold',
+                        severity: 'high',
+                        time: this.getRandomTime(),
+                        priority: 'high'
                     });
                 }
+                
+                // Energy alerts
+                const totalGeneration = Object.values(this.sensors.energy)
+                    .reduce((sum, source) => sum + source.output, 0);
+                if (totalGeneration < 200) {
+                    this.alerts.push({
+                        type: 'Energy Supply Warning',
+                        message: 'Total generation below optimal threshold',
+                        severity: 'medium',
+                        time: this.getRandomTime(),
+                        priority: 'medium'
+                    });
+                }
+                
+                this.updateAlertsDisplay();
             }
-            
-            content.innerHTML = html;
-        }
-        
-        function updateTrafficData(data) {
-            const content = document.getElementById('traffic-content');
-            const status = document.getElementById('traffic-status');
-            
-            if (!data || Object.keys(data).length === 0) {
-                content.innerHTML = '<div class="loading">No traffic data available</div>';
-                status.className = 'status-indicator status-inactive';
-                return;
-            }
-            
-            const hasCriticalIssues = data.critical_issues && data.critical_issues.length > 0;
-            status.className = hasCriticalIssues ? 'status-indicator status-critical' : 'status-indicator status-active';
-            
-            let html = '';
-            
-            // Traffic Flow Data
-            if (data.traffic_flow) {
-                html += '<h4>Traffic Flow:</h4>';
-                for (const [sensorId, flowData] of Object.entries(data.traffic_flow)) {
-                    const congestionLevel = (flowData.congestion_level * 100).toFixed(1);
-                    const congestionClass = flowData.congestion_level > 0.8 ? 'alert-critical' : 
-                                          flowData.congestion_level > 0.6 ? 'alert-high' : '';
-                    
-                    html += `
-                        <div class="data-item ${congestionClass}">
-                            <strong>${sensorId}:</strong><br>
-                            Vehicles: ${flowData.vehicle_count}<br>
-                            Speed: ${flowData.average_speed.toFixed(1)} km/h<br>
-                            Congestion: ${congestionLevel}%
+
+            updateAlertsDisplay() {
+                const alertContainer = document.querySelector('.alerts-container');
+                const alertCount = document.getElementById('alert-count');
+                
+                if (alertContainer && this.alerts.length > 0) {
+                    alertContainer.innerHTML = this.alerts.slice(0, 5).map(alert => `
+                        <div class="alert-item alert-priority-${alert.priority}">
+                            <div class="fw-bold text-${alert.severity === 'critical' ? 'danger' : alert.severity === 'high' ? 'warning' : 'info'}">${alert.type}</div>
+                            <div class="alert-time">${alert.time}</div>
+                            <small>${alert.message}</small>
                         </div>
-                    `;
+                    `).join('');
+                }
+                
+                if (alertCount) {
+                    alertCount.textContent = this.alerts.length;
                 }
             }
-            
-            // Critical Issues
-            if (data.critical_issues && data.critical_issues.length > 0) {
-                html += '<h4>Critical Issues:</h4>';
-                data.critical_issues.forEach(issue => {
-                    html += `
-                        <div class="alert-item">
-                            <strong>${issue.type}:</strong><br>
-                            Location: ${Array.isArray(issue.location) ? issue.location.join(', ') : issue.location}<br>
-                            Severity: ${issue.severity}
-                        </div>
-                    `;
+
+            updatePredictions() {
+                // AI predictions with realistic variations
+                this.predictions.pm25Decrease = 8 + Math.random() * 15;
+                this.predictions.trafficCongestion = Math.random() > 0.6 ? 'increasing' : 'decreasing';
+                this.predictions.energyDemand = 235 + Math.random() * 30;
+                
+                this.updateAIPredictions();
+            }
+
+            updateAIPredictions() {
+                // Update Environmental AI predictions
+                const envPredictions = [
+                    `PM2.5 levels predicted to ${Math.random() > 0.5 ? 'decrease' : 'stabilize'} by ${this.predictions.pm25Decrease.toFixed(0)}% in next 2 hours`,
+                    `Recommend ${Math.random() > 0.5 ? 'increasing' : 'optimizing'} solar capacity by ${Math.round(Math.random() * 20 + 5)} MW`,
+                    `Wind conditions ${Math.random() > 0.4 ? 'favorable' : 'challenging'} for next ${Math.round(Math.random() * 6 + 3)} hours`
+                ];
+                
+                const envElements = document.querySelectorAll('.environmental-ai li');
+                envPredictions.forEach((text, index) => {
+                    if (envElements[index]) {
+                        const icons = ['check-circle', 'lightbulb', 'wind'];
+                        const colors = ['success', 'warning', 'info'];
+                        envElements[index].innerHTML = `<i class="fas fa-${icons[index]} text-${colors[index]} me-2"></i>${text}`;
+                    }
+                });
+                
+                // Update Infrastructure AI predictions
+                const infraPredictions = [
+                    `${Math.random() > 0.3 ? 'Schedule' : 'Defer'} inspection for SG001 sensor within ${Math.round(Math.random() * 48 + 24)} hours`,
+                    `Fatigue analysis shows ${Math.round(Math.random() * 10 + 10)} years remaining structural life`,
+                    `Overall structural integrity: ${Math.round(80 + Math.random() * 15)}%`
+                ];
+                
+                const infraElements = document.querySelectorAll('.infrastructure-ai li');
+                infraPredictions.forEach((text, index) => {
+                    if (infraElements[index]) {
+                        const icons = ['wrench', 'chart-line', 'shield-alt'];
+                        const colors = ['danger', 'success', 'success'];
+                        infraElements[index].innerHTML = `<i class="fas fa-${icons[index]} text-${colors[index]} me-2"></i>${text}`;
+                    }
+                });
+                
+                // Update Traffic AI predictions  
+                const trafficPredictions = [
+                    `Suggest ${Math.random() > 0.5 ? 'alternate route via Highway 101' : 'main corridor optimization'}`,
+                    `Adjust signal timing: ${Math.random() > 0.5 ? '+' : '-'}${Math.round(Math.random() * 20 + 5)}s ${Math.random() > 0.5 ? 'green' : 'red'} phase`,
+                    `Notify ${Math.round(Math.random() * 2000 + 1000).toLocaleString()} mobile users about ${Math.random() > 0.5 ? 'delays' : 'optimal routes'}`
+                ];
+                
+                const trafficElements = document.querySelectorAll('.traffic-ai li');
+                trafficPredictions.forEach((text, index) => {
+                    if (trafficElements[index]) {
+                        const icons = ['route', 'clock', 'mobile-alt'];
+                        const colors = ['danger', 'warning', 'info'];
+                        trafficElements[index].innerHTML = `<i class="fas fa-${icons[index]} text-${colors[index]} me-2"></i>${text}`;
+                    }
                 });
             }
-            
-            content.innerHTML = html;
+
+            updateSystemMetrics() {
+                // Simulate system performance variations
+                this.systemMetrics.sensorsActive = 156 + Math.round((Math.random() - 0.5) * 6);
+                this.systemMetrics.responseTime = 2.3 + (Math.random() - 0.5) * 0.8;
+                this.systemMetrics.systemUptime = 99.7 + (Math.random() - 0.5) * 0.4;
+                this.systemMetrics.dataPoints = 47892 + Math.round((Math.random() - 0.5) * 5000);
+                
+                // Update display
+                const elements = {
+                    'sensors-active': this.systemMetrics.sensorsActive,
+                    'response-time': `${this.systemMetrics.responseTime.toFixed(1)}s`,
+                    'system-uptime': `${this.systemMetrics.systemUptime.toFixed(1)}%`,
+                    'data-points': this.systemMetrics.dataPoints.toLocaleString()
+                };
+                
+                Object.entries(elements).forEach(([id, value]) => {
+                    const element = document.getElementById(id);
+                    if (element) {
+                        element.textContent = value;
+                        element.classList.add('updating');
+                        setTimeout(() => element.classList.remove('updating'), 300);
+                    }
+                });
+            }
+
+            updateAgentStatus() {
+                // Simulate occasional agent status changes (mostly active)
+                Object.keys(this.agentStatus).forEach(agent => {
+                    // 98% chance to stay active
+                    if (Math.random() < 0.02) {
+                        this.agentStatus[agent] = !this.agentStatus[agent];
+                    }
+                });
+                
+                // Update visual indicators
+                const statusMappings = {
+                    'environmental': 'env-agent-status',
+                    'infrastructure': 'infra-agent-status', 
+                    'traffic': 'traffic-agent-status'
+                };
+                
+                Object.entries(statusMappings).forEach(([agent, elementId]) => {
+                    const element = document.getElementById(elementId);
+                    if (element) {
+                        if (this.agentStatus[agent]) {
+                            element.className = 'ai-agent-status ai-agent-active';
+                        } else {
+                            element.className = 'ai-agent-status ai-agent-inactive';
+                        }
+                    }
+                });
+            }
+
+            addInteractiveEffects() {
+                // Enhanced card hover effects
+                document.querySelectorAll('.card').forEach(card => {
+                    card.addEventListener('mouseenter', function() {
+                        this.style.transform = 'translateY(-3px) scale(1.01)';
+                        this.style.boxShadow = '0 15px 45px rgba(0, 0, 0, 0.2)';
+                    });
+                    
+                    card.addEventListener('mouseleave', function() {
+                        this.style.transform = '';
+                        this.style.boxShadow = '';
+                    });
+                });
+                
+                // Interactive sensor items
+                document.querySelectorAll('.sensor-item').forEach(item => {
+                    item.addEventListener('click', function() {
+                        this.style.animation = 'pulse 0.3s ease-in-out';
+                        setTimeout(() => {
+                            this.style.animation = '';
+                        }, 300);
+                    });
+                });
+                
+                // Interactive alerts
+                document.addEventListener('click', (e) => {
+                    if (e.target.closest('.alert-item')) {
+                        const alert = e.target.closest('.alert-item');
+                        alert.style.transform = 'scale(0.98)';
+                        setTimeout(() => {
+                            alert.style.transform = '';
+                        }, 150);
+                    }
+                });
+            }
+
+            getRandomTime() {
+                const options = [
+                    `${Math.floor(Math.random() * 30) + 1} minute${Math.random() > 0.5 ? 's' : ''} ago`,
+                    `${Math.floor(Math.random() * 10) + 1} second${Math.random() > 0.5 ? 's' : ''} ago`,
+                    'Just now'
+                ];
+                return options[Math.floor(Math.random() * options.length)];
+            }
         }
-        
-        function updateSystemStatus(data) {
-            const content = document.getElementById('system-content');
+
+        // Initialize enhanced dashboard when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            const dashboard = new EnhancedSmartCityDashboard();
             
-            if (!data) {
-                content.innerHTML = '<div class="loading">No system data available</div>';
-                return;
-            }
+            // Make dashboard globally accessible for debugging
+            window.smartCityDashboard = dashboard;
             
-            let html = '<h4>Agent Status:</h4>';
-            html += '<div class="metrics-grid">';
-            
-            for (const [agentName, agentData] of Object.entries(data.agents)) {
-                const statusClass = agentData.status === 'active' ? 'status-active' : 'status-inactive';
-                html += `
-                    <div class="metric-card">
-                        <span class="status-indicator ${statusClass}"></span>
-                        <div class="metric-label">${agentName.charAt(0).toUpperCase() + agentName.slice(1)}</div>
-                        <div class="metric-value">${agentData.status}</div>
-                    </div>
-                `;
-            }
-            
-            html += '</div>';
-            
-            // Alerts summary
-            if (data.alerts) {
-                html += `
-                    <h4>Alerts Summary:</h4>
-                    <div class="metrics-grid">
-                        <div class="metric-card">
-                            <div class="metric-value">${data.alerts.total_count}</div>
-                            <div class="metric-label">Total Alerts</div>
-                        </div>
-                        <div class="metric-card">
-                            <div class="metric-value">${data.alerts.critical_count}</div>
-                            <div class="metric-label">Critical</div>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            content.innerHTML = html;
-        }
-        
-        function updateAlerts(alerts) {
-            const content = document.getElementById('alerts-content');
-            
-            if (!alerts || alerts.length === 0) {
-                content.innerHTML = '<div class="loading">No active alerts</div>';
-                return;
-            }
-            
-            let html = '';
-            alerts.slice(-10).reverse().forEach(alert => {
-                html += `
-                    <div class="alert-item alert-${alert.severity}">
-                        <strong>${alert.type.toUpperCase()}:</strong><br>
-                        ${alert.message}<br>
-                        <small>Areas: ${Array.isArray(alert.affected_areas) ? alert.affected_areas.join(', ') : alert.affected_areas}</small><br>
-                        <small>${new Date(alert.timestamp).toLocaleString()}</small>
-                    </div>
-                `;
-            });
-            
-            content.innerHTML = html;
-        }
-        
-        async function fetchData(endpoint) {
-            try {
-                const response = await fetch(`/api/${endpoint}`);
-                if (response.ok) {
-                    return await response.json();
-                }
-                throw new Error(`HTTP ${response.status}`);
-            } catch (error) {
-                console.error(`Error fetching ${endpoint}:`, error);
-                return null;
-            }
-        }
-        
-        async function refreshAllData() {
-            console.log('Refreshing dashboard data...');
-            
-            // Fetch all data in parallel
-            const [envData, infraData, trafficData, systemData, alertsData] = await Promise.all([
-                fetchData('environmental-data'),
-                fetchData('infrastructure-data'),
-                fetchData('traffic-data'),
-                fetchData('system-status'),
-                fetchData('joint-alerts')
-            ]);
-            
-            // Update all panels
-            updateEnvironmentalData(envData);
-            updateInfrastructureData(infraData);
-            updateTrafficData(trafficData);
-            updateSystemStatus(systemData);
-            updateAlerts(alertsData);
-        }
-        
-        // Initialize dashboard
-        document.addEventListener('DOMContentLoaded', function() {
-            refreshAllData();
-            
-            // Set up auto-refresh
-            refreshInterval = setInterval(refreshAllData, 30000); // Refresh every 30 seconds
-        });
-        
-        // Clean up on page unload
-        window.addEventListener('beforeunload', function() {
-            if (refreshInterval) {
-                clearInterval(refreshInterval);
-            }
+            console.log('🎯 Dashboard ready! Access via window.smartCityDashboard');
         });
     </script>
 </body>

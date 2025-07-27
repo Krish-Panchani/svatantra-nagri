@@ -3,718 +3,1559 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart City 3D View - AI Hackathon Demo</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.4/socket.io.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <title>Svatantra-Nagari - Smart City 3D Visualization</title>
     <style>
-        * {
+        body {
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #000;
             color: white;
             overflow: hidden;
         }
 
-        .header {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 15px 20px;
-            z-index: 1000;
-            backdrop-filter: blur(10px);
-        }
-
-        .header h1 {
-            font-size: 1.5rem;
-            margin-bottom: 5px;
-        }
-
-        .nav-buttons {
-            margin-top: 10px;
-        }
-
-        .nav-btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: white;
-            padding: 8px 16px;
-            margin-right: 10px;
-            border-radius: 20px;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 0.9rem;
-            transition: all 0.3s ease;
-        }
-
-        .nav-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-
-        .nav-btn.active {
-            background: rgba(255, 255, 255, 0.4);
-            border-color: rgba(255, 255, 255, 0.6);
-        }
-
-        #canvas-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
+        #container {
+            position: relative;
+            width: 100vw;
             height: 100vh;
         }
 
-        .control-panel {
-            position: absolute;
-            top: 120px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 20px;
-            border-radius: 10px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            z-index: 1000;
-            width: 280px;
-        }
-
-        .control-panel h3 {
-            margin-bottom: 15px;
-            color: #FFD700;
-        }
-
-        .control-group {
-            margin-bottom: 20px;
-        }
-
-        .control-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-size: 0.9rem;
-        }
-
-        .control-group input[type="range"] {
-            width: 100%;
-            margin-bottom: 10px;
-        }
-
-        .control-group button {
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-right: 5px;
-            transition: all 0.3s ease;
-        }
-
-        .control-group button:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-
-        .control-group button.active {
-            background: rgba(255, 255, 255, 0.4);
-            border-color: rgba(255, 255, 255, 0.6);
-        }
-
-        .info-panel {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 15px;
-            border-radius: 10px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            z-index: 1000;
-            max-width: 300px;
-        }
-
-        .legend {
-            margin-top: 15px;
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            margin: 8px 0;
-            font-size: 0.9rem;
-        }
-
-        .legend-color {
-            width: 20px;
-            height: 20px;
-            border-radius: 3px;
-            margin-right: 10px;
-        }
-
-        .loading-overlay {
+        #ui-overlay {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.8);
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        /* Svatantra-Nagari Title */
+        .city-title {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #FFD700;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            letter-spacing: 2px;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            pointer-events: none;
+            z-index: 150;
+        }
+
+        .control-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(15px);
+            border-radius: 15px;
+            padding: 20px;
+            pointer-events: all;
+            min-width: 320px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .infrastructure-panel {
+            position: absolute;
+            top: 100px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(15px);
+            border-radius: 15px;
+            padding: 20px;
+            pointer-events: all;
+            min-width: 350px;
+            max-height: 60vh;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .traffic-control-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(15px);
+            border-radius: 15px;
+            padding: 20px;
+            pointer-events: all;
+            min-width: 400px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .bridge-details-panel {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(15px);
+            border-radius: 15px;
+            padding: 20px;
+            pointer-events: all;
+            min-width: 350px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .agent-status {
+            margin-bottom: 15px;
+            padding: 12px;
+            border-radius: 10px;
+            border-left: 4px solid;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .agent-status:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+
+        .env-status { border-left-color: #4ade80; }
+        .infra-status { border-left-color: #3b82f6; }
+        .traffic-status { border-left-color: #ef4444; }
+
+        .control-button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            color: white;
+            padding: 12px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s ease;
+            font-size: 0.9em;
+            width: 100%;
+        }
+
+        .control-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .traffic-light-control {
             display: flex;
             align-items: center;
-            justify-content: center;
-            z-index: 2000;
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
         }
 
-        .loading-content {
-            text-align: center;
-        }
-
-        .loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 3px solid rgba(255,255,255,.3);
+        .light-indicator {
+            width: 15px;
+            height: 15px;
             border-radius: 50%;
-            border-top-color: #fff;
-            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+            border: 2px solid #333;
+        }
+
+        .light-red { background-color: #ff0000; }
+        .light-yellow { background-color: #ffaa00; }
+        .light-green { background-color: #00ff00; }
+
+        .bridge-sensor {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            border-left: 3px solid;
+        }
+
+        .sensor-normal { border-left-color: #4ade80; }
+        .sensor-warning { border-left-color: #fbbf24; }
+        .sensor-critical { border-left-color: #ef4444; }
+
+        .data-value {
+            font-weight: bold;
+            color: #ffffff;
+        }
+
+        .pulsing {
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.05); }
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 200;
+        }
+
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid #4ade80;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
             margin: 0 auto 20px;
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
-        .tooltip {
-            position: absolute;
-            background: rgba(0, 0, 0, 0.9);
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-            pointer-events: none;
-            z-index: 1001;
-            font-size: 0.9rem;
-            border: 1px solid rgba(255, 255, 255, 0.3);
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
         }
+
+        .status-active { background-color: #4ade80; }
+        .status-warning { background-color: #fbbf24; }
+        .status-critical { background-color: #ef4444; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>🏙️ Smart City 3D Visualization</h1>
-        <div class="nav-buttons">
-            <a href="/dashboard" class="nav-btn">📊 Dashboard</a>
-            <a href="/3d-view" class="nav-btn active">🏙️ 3D View</a>
-        </div>
-    </div>
-
-    <div id="canvas-container"></div>
-
-    <div class="control-panel">
-        <h3>🎛️ View Controls</h3>
-        
-        <div class="control-group">
-            <label>Camera Angle</label>
-            <button onclick="setCameraView('aerial')">Aerial</button>
-            <button onclick="setCameraView('street')">Street</button>
-            <button onclick="setCameraView('overview')">Overview</button>
+    <div id="container">
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <h3>Loading Svatantra-Nagari Smart City...</h3>
+            <p>Initializing road networks, traffic systems, and bridge infrastructure...</p>
         </div>
 
-        <div class="control-group">
-            <label>Show/Hide Layers</label>
-            <button id="traffic-toggle" class="active" onclick="toggleLayer('traffic')">Traffic</button>
-            <button id="environment-toggle" class="active" onclick="toggleLayer('environment')">Air Quality</button>
-            <button id="infrastructure-toggle" class="active" onclick="toggleLayer('infrastructure')">Infrastructure</button>
-        </div>
-
-        <div class="control-group">
-            <label>Animation Speed</label>
-            <input type="range" id="animation-speed" min="0.1" max="2" step="0.1" value="1" onchange="updateAnimationSpeed(this.value)">
-            <small>Current: <span id="speed-value">1.0</span>x</small>
-        </div>
-
-        <div class="control-group">
-            <button onclick="resetView()">🔄 Reset View</button>
-            <button onclick="toggleFullscreen()">🔍 Fullscreen</button>
-        </div>
-    </div>
-
-    <div class="info-panel">
-        <h3>📊 Live Data</h3>
-        <div id="live-stats">
-            <p>Traffic Sensors: <span id="traffic-count">0</span></p>
-            <p>Air Quality Stations: <span id="air-count">0</span></p>
-            <p>Infrastructure Assets: <span id="infra-count">1</span></p>
-            <p>Active Alerts: <span id="alert-count">0</span></p>
-        </div>
-
-        <div class="legend">
-            <h4>Legend</h4>
-            <div class="legend-item">
-                <div class="legend-color" style="background: #4CAF50;"></div>
-                <span>Normal/Good</span>
+        <div id="ui-overlay">
+            <!-- City Title -->
+            <div class="city-title">
+                स्वतंत्र-नगरी<br>
+                <span style="font-size: 0.6em; letter-spacing: 1px;">SVATANTRA-NAGARI</span>
             </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background: #FF9800;"></div>
-                <span>Warning/Fair</span>
+
+          
+
+               
+
+            <!-- Infrastructure Panel -->
+            <div class="infrastructure-panel">
+                <h3>🌉 Infrastructure Monitoring</h3>
+                
+                <h4>Main Bridge - Structure Analysis</h4>
+                <div id="bridge-sensors">
+                    <div class="bridge-sensor sensor-critical">
+                        <span>Strain Sensor SG001</span>
+                        <span class="data-value" id="sg001-value">285 µε</span>
+                    </div>
+                    <div class="bridge-sensor sensor-normal">
+                        <span>Strain Sensor SG002</span>
+                        <span class="data-value" id="sg002-value">180 µε</span>
+                    </div>
+                    <div class="bridge-sensor sensor-warning">
+                        <span>Strain Sensor SG003</span>
+                        <span class="data-value" id="sg003-value">240 µε</span>
+                    </div>
+                    <div class="bridge-sensor sensor-normal">
+                        <span>Strain Sensor SG004</span>
+                        <span class="data-value" id="sg004-value">165 µε</span>
+                    </div>
+                </div>
+
+                <h4>Vibration Analysis</h4>
+                <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; margin: 10px 0;">
+                    <div>Mode 1 Frequency: <span class="data-value">2.43 Hz</span></div>
+                    <div>Mode 2 Frequency: <span class="data-value">4.78 Hz</span></div>
+                    <div>Damping Ratio: <span class="data-value">2.8%</span></div>
+                </div>
+
+                <h4>Load Monitoring</h4>
+                <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; margin: 10px 0;">
+                    <div>Current Vehicles: <span class="data-value" id="bridge-vehicles">0</span></div>
+                    <div>Total Load: <span class="data-value" id="bridge-load">0 kN</span></div>
+                    <div>Max Axle Load: <span class="data-value" id="max-axle">0 kN</span></div>
+                </div>
+
+                <button class="control-button" onclick="generateMaintenanceReport()">
+                    📋 Generate Maintenance Report
+                </button>
             </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background: #F44336;"></div>
-                <span>Critical/Poor</span>
+
+            <!-- Traffic Control Panel -->
+            <div class="traffic-control-panel">
+                <h3>🚦 Traffic Signal Control</h3>
+                
+                <div id="traffic-lights">
+                    <div class="traffic-light-control">
+                        <div class="light-indicator light-green" id="light-ts001"></div>
+                        <span>TS001 - Main St & 1st Ave</span>
+                        <button onclick="changeLight('TS001')" style="margin-left: auto; padding: 4px 8px; border: none; background: #333; color: white; border-radius: 4px;">Change</button>
+                    </div>
+                    <div class="traffic-light-control">
+                        <div class="light-indicator light-red" id="light-ts002"></div>
+                        <span>TS002 - Highway 101</span>
+                        <button onclick="changeLight('TS002')" style="margin-left: auto; padding: 4px 8px; border: none; background: #333; color: white; border-radius: 4px;">Change</button>
+                    </div>
+                    <div class="traffic-light-control">
+                        <div class="light-indicator light-yellow" id="light-ts003"></div>
+                        <span>TS003 - Downtown Bridge</span>
+                        <button onclick="changeLight('TS003')" style="margin-left: auto; padding: 4px 8px; border: none; background: #333; color: white; border-radius: 4px;">Change</button>
+                    </div>
+                    <div class="traffic-light-control">
+                        <div class="light-indicator light-green" id="light-ts004"></div>
+                        <span>TS004 - University Gate</span>
+                        <button onclick="changeLight('TS004')" style="margin-left: auto; padding: 4px 8px; border: none; background: #333; color: white; border-radius: 4px;">Change</button>
+                    </div>
+                </div>
+
+                <h4>Traffic Flow Status</h4>
+                <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; margin: 10px 0;">
+                    <div>Active Vehicles: <span class="data-value" id="total-vehicles">0</span></div>
+                    <div>Average Speed: <span class="data-value" id="avg-speed">0 km/h</span></div>
+                    <div>Congestion Level: <span class="data-value" id="congestion-percent">0%</span></div>
+                </div>
+            </div>
+
+            <!-- Bridge Details Panel -->
+            <div class="bridge-details-panel">
+                <h3>🔧 Bridge Infrastructure Details</h3>
+                
+                <h4>Structural Components</h4>
+                <div style="font-size: 0.9em;">
+                    <div style="margin: 8px 0;"><strong>Main Span:</strong> 120m steel truss</div>
+                    <div style="margin: 8px 0;"><strong>Supports:</strong> 4 concrete piers</div>
+                    <div style="margin: 8px 0;"><strong>Deck:</strong> Reinforced concrete</div>
+                    <div style="margin: 8px 0;"><strong>Load Capacity:</strong> 500 kN</div>
+                </div>
+
+                <h4>Health Assessment</h4>
+                <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; margin: 10px 0;">
+                    <div>Overall Health: <span class="data-value" style="color: #fbbf24;">Fair (65%)</span></div>
+                    <div>Fatigue Life: <span class="data-value" style="color: #4ade80;">15 years</span></div>
+                    <div>Inspection Due: <span class="data-value" style="color: #ef4444;">48 hours</span></div>
+                </div>
+
+                <h4>Real-time Alerts</h4>
+                <div id="bridge-alerts" style="font-size: 0.85em;">
+                    <div style="color: #ef4444; margin: 5px 0;">⚠️ SG001 exceeded threshold</div>
+                    <div style="color: #fbbf24; margin: 5px 0;">⚠️ High traffic load detected</div>
+                </div>
+
+                <button class="control-button" onclick="startBridgeInspection()">
+                    🔍 Start Automated Inspection
+                </button>
             </div>
         </div>
     </div>
 
-    <div id="loading-overlay" class="loading-overlay">
-        <div class="loading-content">
-            <div class="loading-spinner"></div>
-            <h2>Loading 3D City Model...</h2>
-            <p>Initializing visualization engine</p>
-        </div>
-    </div>
-
-    <div id="tooltip" class="tooltip" style="display: none;"></div>
-
+    <!-- Three.js and dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script>
         // Global variables
         let scene, camera, renderer, controls;
-        let trafficObjects = [];
-        let environmentObjects = [];
-        let infrastructureObjects = [];
-        let animationSpeed = 1.0;
-        let showLayers = {
-            traffic: true,
-            environment: true,
-            infrastructure: true
-        };
-
-        // Socket.IO connection
-        const socket = io();
+        let roadNetwork = {};
+        let vehicles = [];
+        let trafficLights = {};
+        let bridgeComponents = {};
+        let infrastructureSensors = {};
+        let currentTrafficLightStates = {};
         
-        // Data storage
-        let trafficData = {};
-        let airQualityData = [];
-        let infrastructureData = {};
-        let alerts = [];
+        // Traffic simulation variables
+        let trafficFlowActive = true;
+        let emergencyMode = false;
+        let bridgeInspectionMode = false;
 
-        // Initialize 3D scene
-        function init3DScene() {
-            // Scene setup
+        // Initialize the enhanced 3D scene
+        function init() {
+            // Create scene
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x001122);
+            scene.fog = new THREE.Fog(0x1a1a2e, 100, 800);
 
-            // Camera setup
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(50, 50, 50);
+            // Create camera
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+            camera.position.set(150, 120, 200);
 
-            // Renderer setup
-            renderer = new THREE.WebGLRenderer({ antialias: true });
+            // Create renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x1a1a2e, 1);
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            document.getElementById('canvas-container').appendChild(renderer.domElement);
+            document.getElementById('container').appendChild(renderer.domElement);
 
-            // Controls
+            // Create controls
             controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2;
+            controls.minDistance = 20;
+            controls.maxDistance = 500;
 
-            // Lighting
-            const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
-            scene.add(ambientLight);
+            // Add event listeners
+            window.addEventListener('resize', onWindowResize);
 
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            directionalLight.position.set(100, 100, 50);
-            directionalLight.castShadow = true;
-            scene.add(directionalLight);
-
-            // Create city base
-            createCityBase();
-
-            // Hide loading overlay
-            document.getElementById('loading-overlay').style.display = 'none';
-
+            // Set up enhanced lighting
+            setupEnhancedLighting();
+            
+            // Create enhanced city
+            createEnhancedCity();
+            
+            // Start systems
+            startSimulationSystems();
+            
+            // Hide loading screen
+            document.getElementById('loading').style.display = 'none';
+            
             // Start animation loop
             animate();
         }
 
-        function createCityBase() {
-            // Ground plane
-            const groundGeometry = new THREE.PlaneGeometry(200, 200);
-            const groundMaterial = new THREE.MeshLambertMaterial({ color: 0x333333 });
+        function setupEnhancedLighting() {
+            // Ambient light for overall illumination
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
+            scene.add(ambientLight);
+
+            // Main directional light (sun)
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            directionalLight.position.set(200, 200, 100);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 4096;
+            directionalLight.shadow.mapSize.height = 4096;
+            directionalLight.shadow.camera.near = 0.5;
+            directionalLight.shadow.camera.far = 1000;
+            directionalLight.shadow.camera.left = -200;
+            directionalLight.shadow.camera.right = 200;
+            directionalLight.shadow.camera.top = 200;
+            directionalLight.shadow.camera.bottom = -200;
+            scene.add(directionalLight);
+
+            // Multiple area lights for realistic lighting
+            const lights = [
+                { pos: [100, 50, 100], color: 0xffffff, intensity: 0.6 },
+                { pos: [-100, 50, 100], color: 0xffffff, intensity: 0.6 },
+                { pos: [100, 50, -100], color: 0xffffff, intensity: 0.6 },
+                { pos: [-100, 50, -100], color: 0xffffff, intensity: 0.6 }
+            ];
+
+            lights.forEach(light => {
+                const pointLight = new THREE.PointLight(light.color, light.intensity, 200);
+                pointLight.position.set(...light.pos);
+                scene.add(pointLight);
+            });
+        }
+
+        function createEnhancedCity() {
+            // Create enhanced ground
+            createEnhancedGround();
+            
+            // Create comprehensive road network
+            createComprehensiveRoadNetwork();
+            
+            // Create detailed bridge infrastructure
+            createDetailedBridge();
+            
+            // Create districts with buildings (positioned to avoid bridge)
+            createEnhancedDistricts();
+            
+            // Create traffic management system
+            createTrafficManagementSystem();
+            
+            // Create environmental systems
+            createEnvironmentalSystems();
+        }
+
+        function createEnhancedGround() {
+            // Main ground plane
+            const groundGeometry = new THREE.PlaneGeometry(800, 800);
+            const groundMaterial = new THREE.MeshLambertMaterial({ 
+                color: 0x2d3748,
+                transparent: true,
+                opacity: 0.9
+            });
             const ground = new THREE.Mesh(groundGeometry, groundMaterial);
             ground.rotation.x = -Math.PI / 2;
             ground.receiveShadow = true;
             scene.add(ground);
 
-            // Grid
-            const gridHelper = new THREE.GridHelper(200, 20, 0x555555, 0x333333);
+            // Enhanced grid system
+            const gridHelper = new THREE.GridHelper(800, 80, 0x4a5568, 0x2d3748);
+            gridHelper.position.y = 0.1;
             scene.add(gridHelper);
 
-            // Create some basic city buildings
-            createBuildings();
+            // Add city zones with different textures
+            createCityZones();
         }
 
-        function createBuildings() {
-            const buildingPositions = [
-                { x: -30, z: -30, height: 20 },
-                { x: -10, z: -30, height: 35 },
-                { x: 10, z: -30, height: 15 },
-                { x: 30, z: -30, height: 25 },
-                { x: -30, z: 30, height: 30 },
-                { x: 10, z: 30, height: 40 },
-                { x: 30, z: 30, height: 18 }
+        function createCityZones() {
+            const zones = [
+                { center: [0, 50], size: 80, color: 0x4a5568, name: 'downtown' }, // Moved away from bridge
+                { center: [-120, 120], size: 60, color: 0x68d391, name: 'residential' },
+                { center: [120, 120], size: 60, color: 0x63b3ed, name: 'commercial' },
+                { center: [-120, -120], size: 60, color: 0xfbb6ce, name: 'industrial' },
+                { center: [120, -120], size: 60, color: 0xfbd38d, name: 'tech_district' }
             ];
 
-            buildingPositions.forEach(pos => {
-                const geometry = new THREE.BoxGeometry(8, pos.height, 8);
-                const material = new THREE.MeshLambertMaterial({ 
-                    color: new THREE.Color().setHSL(Math.random() * 0.1 + 0.5, 0.5, 0.5) 
+            zones.forEach(zone => {
+                const zoneGeometry = new THREE.CylinderGeometry(zone.size, zone.size, 1, 16);
+                const zoneMaterial = new THREE.MeshLambertMaterial({ 
+                    color: zone.color,
+                    transparent: true,
+                    opacity: 0.2
                 });
-                const building = new THREE.Mesh(geometry, material);
-                building.position.set(pos.x, pos.height / 2, pos.z);
-                building.castShadow = true;
-                scene.add(building);
+                const zoneMesh = new THREE.Mesh(zoneGeometry, zoneMaterial);
+                zoneMesh.position.set(zone.center[0], 0.5, zone.center[1]);
+                zoneMesh.userData = { type: 'zone', name: zone.name };
+                scene.add(zoneMesh);
             });
         }
 
-        function updateTrafficVisualization() {
-            // Clear existing traffic objects
-            trafficObjects.forEach(obj => scene.remove(obj));
-            trafficObjects = [];
-
-            if (!showLayers.traffic) return;
-
-            const trafficPositions = [
-                { x: -40, z: 0 },   // TS001
-                { x: 0, z: -40 },   // TS002
-                { x: 0, z: 0 },     // TS003 (bridge)
-                { x: 40, z: 0 },    // TS004
-                { x: 0, z: 40 }     // TS005
+        function createComprehensiveRoadNetwork() {
+            // Define comprehensive road network with proper bridge connections
+            const roadSegments = [
+                // Main arterials connecting to bridge
+                { start: [-150, 0], end: [-60, 0], width: 12, type: 'highway', lanes: 4 },
+                { start: [60, 0], end: [150, 0], width: 12, type: 'highway', lanes: 4 },
+                { start: [0, -300], end: [0, -20], width: 12, type: 'highway', lanes: 4 },
+                { start: [0, 20], end: [0, 300], width: 12, type: 'highway', lanes: 4 },
+                
+                // Bridge deck (elevated)
+                { start: [-60, 0], end: [60, 0], width: 10, type: 'bridge_deck', lanes: 3, elevation: 8 },
+                
+                // Secondary roads
+                { start: [-200, -200], end: [200, 200], width: 8, type: 'arterial', lanes: 2 },
+                { start: [-200, 200], end: [200, -200], width: 8, type: 'arterial', lanes: 2 },
+                
+                // Local roads
+                { start: [-150, -100], end: [150, -100], width: 6, type: 'local', lanes: 2 },
+                { start: [-150, 100], end: [150, 100], width: 6, type: 'local', lanes: 2 },
+                { start: [-100, -150], end: [-100, 150], width: 6, type: 'local', lanes: 2 },
+                { start: [100, -150], end: [100, 150], width: 6, type: 'local', lanes: 2 }
             ];
 
-            Object.entries(trafficData).forEach(([sensorId, data], index) => {
-                if (index >= trafficPositions.length) return;
+            roadSegments.forEach((road, index) => {
+                createRoadSegment(road, `road_${index}`);
+            });
 
-                const pos = trafficPositions[index];
-                const congestionLevel = data.congestion_level || 0;
-                
-                // Traffic light pole
-                const poleGeometry = new THREE.CylinderGeometry(0.2, 0.2, 8);
-                const poleMaterial = new THREE.MeshLambertMaterial({ color: 0x666666 });
-                const pole = new THREE.Mesh(poleGeometry, poleMaterial);
-                pole.position.set(pos.x, 4, pos.z);
-                
-                // Traffic light color based on congestion
-                const lightColor = congestionLevel < 0.3 ? 0x00ff00 : 
-                                  congestionLevel < 0.7 ? 0xffff00 : 0xff0000;
-                
-                const lightGeometry = new THREE.SphereGeometry(1);
-                const lightMaterial = new THREE.MeshBasicMaterial({ color: lightColor });
-                const light = new THREE.Mesh(lightGeometry, lightMaterial);
-                light.position.set(pos.x, 8, pos.z);
-                
-                // Add glow effect
-                const glowMaterial = new THREE.MeshBasicMaterial({
-                    color: lightColor,
+            // Create intersections
+            createIntersections();
+        }
+
+        function createRoadSegment(road, roadId) {
+            const [startX, startZ] = road.start;
+            const [endX, endZ] = road.end;
+            const length = Math.sqrt((endX - startX) ** 2 + (endZ - startZ) ** 2);
+            const angle = Math.atan2(endZ - startZ, endX - startX);
+            const elevation = road.elevation || 0.2;
+
+            // Road surface
+            const roadGeometry = new THREE.PlaneGeometry(length, road.width);
+            const roadMaterial = new THREE.MeshLambertMaterial({ 
+                color: road.type === 'bridge_deck' ? 0x606060 : 0x2d3748,
+                transparent: true,
+                opacity: 0.9
+            });
+            
+            const roadMesh = new THREE.Mesh(roadGeometry, roadMaterial);
+            roadMesh.rotation.x = -Math.PI / 2;
+            roadMesh.rotation.z = angle;
+            roadMesh.position.set((startX + endX) / 2, elevation, (startZ + endZ) / 2);
+            roadMesh.receiveShadow = true;
+            
+            roadMesh.userData = { 
+                type: 'road', 
+                roadId: roadId,
+                roadType: road.type,
+                lanes: road.lanes,
+                start: road.start,
+                end: road.end,
+                angle: angle,
+                length: length,
+                elevation: elevation
+            };
+            
+            scene.add(roadMesh);
+            roadNetwork[roadId] = roadMesh;
+
+            // Add lane markings
+            createLaneMarkings(road, angle, (startX + endX) / 2, (startZ + endZ) / 2, length, elevation);
+
+            // Add sidewalks for non-bridge roads
+            if (road.type !== 'bridge_deck') {
+                createSidewalks(road, angle, (startX + endX) / 2, (startZ + endZ) / 2, length);
+            }
+        }
+
+        function createLaneMarkings(road, angle, centerX, centerZ, length, elevation) {
+            const markingWidth = 0.3;
+            const markingLength = 2;
+            const spacing = 4;
+
+            // Center line
+            for (let i = -length/2; i < length/2; i += spacing) {
+                const markingGeometry = new THREE.PlaneGeometry(markingLength, markingWidth);
+                const markingMaterial = new THREE.MeshBasicMaterial({ 
+                    color: 0xffffff,
                     transparent: true,
-                    opacity: 0.3
+                    opacity: 0.8
                 });
-                const glow = new THREE.Mesh(new THREE.SphereGeometry(1.5), glowMaterial);
-                glow.position.copy(light.position);
                 
-                // Vehicle flow indicators
-                const vehicleCount = Math.min(data.vehicle_count || 0, 20);
-                for (let i = 0; i < vehicleCount / 5; i++) {
-                    const vehicleGeometry = new THREE.BoxGeometry(1, 0.5, 2);
-                    const vehicleMaterial = new THREE.MeshLambertMaterial({ color: 0x4444ff });
-                    const vehicle = new THREE.Mesh(vehicleGeometry, vehicleMaterial);
+                const marking = new THREE.Mesh(markingGeometry, markingMaterial);
+                marking.rotation.x = -Math.PI / 2;
+                marking.rotation.z = angle;
+                marking.position.set(
+                    centerX + Math.cos(angle) * i,
+                    elevation + 0.05,
+                    centerZ + Math.sin(angle) * i
+                );
+                scene.add(marking);
+            }
+        }
+
+        function createSidewalks(road, angle, centerX, centerZ, length) {
+            const sidewalkWidth = 2;
+            const roadHalfWidth = road.width / 2;
+
+            [-1, 1].forEach(side => {
+                const sidewalkGeometry = new THREE.PlaneGeometry(length, sidewalkWidth);
+                const sidewalkMaterial = new THREE.MeshLambertMaterial({ 
+                    color: 0x4a5568,
+                    transparent: true,
+                    opacity: 0.7
+                });
+                
+                const sidewalk = new THREE.Mesh(sidewalkGeometry, sidewalkMaterial);
+                sidewalk.rotation.x = -Math.PI / 2;
+                sidewalk.rotation.z = angle;
+                
+                const offsetDistance = roadHalfWidth + sidewalkWidth/2 + 1;
+                sidewalk.position.set(
+                    centerX + Math.cos(angle + Math.PI/2) * offsetDistance * side,
+                    0.15,
+                    centerZ + Math.sin(angle + Math.PI/2) * offsetDistance * side
+                );
+                
+                scene.add(sidewalk);
+            });
+        }
+
+        function createIntersections() {
+            const intersections = [
+                { pos: [0, 100], size: 15, id: 'TS001', name: 'Main St & 1st Ave' },
+                { pos: [100, 100], size: 12, id: 'TS002', name: 'Highway 101' },
+                { pos: [-100, 100], size: 12, id: 'TS003', name: 'University District' },
+                { pos: [100, -100], size: 10, id: 'TS004', name: 'Tech District Gate' },
+                { pos: [-100, -100], size: 10, id: 'TS005', name: 'Industrial Zone' }
+            ];
+
+            intersections.forEach(intersection => {
+                createIntersection(intersection);
+            });
+        }
+
+        function createIntersection(intersection) {
+            const [x, z] = intersection.pos;
+            
+            // Intersection base
+            const intersectionGeometry = new THREE.PlaneGeometry(intersection.size, intersection.size);
+            const intersectionMaterial = new THREE.MeshLambertMaterial({ 
+                color: 0x2d3748,
+                transparent: true,
+                opacity: 0.95
+            });
+            
+            const intersectionMesh = new THREE.Mesh(intersectionGeometry, intersectionMaterial);
+            intersectionMesh.rotation.x = -Math.PI / 2;
+            intersectionMesh.position.set(x, 0.3, z);
+            intersectionMesh.receiveShadow = true;
+            scene.add(intersectionMesh);
+
+            // Traffic light system
+            createTrafficLightSystem(intersection);
+        }
+
+        function createTrafficLightSystem(intersection) {
+            const [x, z] = intersection.pos;
+            
+            // Initialize traffic light state
+            currentTrafficLightStates[intersection.id] = {
+                phase: 0, // 0: green, 1: yellow, 2: red
+                timer: 0,
+                duration: [8000, 2000, 6000] // Green, Yellow, Red durations in ms
+            };
+            
+            // Traffic light poles (4 corners)
+            const corners = [
+                [x + 8, z + 8],
+                [x - 8, z + 8],
+                [x - 8, z - 8],
+                [x + 8, z - 8]
+            ];
+
+            trafficLights[intersection.id] = [];
+
+            corners.forEach((corner, index) => {
+                // Pole
+                const poleGeometry = new THREE.CylinderGeometry(0.3, 0.3, 12, 8);
+                const poleMaterial = new THREE.MeshLambertMaterial({ color: 0x4a5568 });
+                const pole = new THREE.Mesh(poleGeometry, poleMaterial);
+                pole.position.set(corner[0], 6, corner[1]);
+                pole.castShadow = true;
+                scene.add(pole);
+
+                // Traffic light housing
+                const housingGeometry = new THREE.BoxGeometry(1.5, 4, 1);
+                const housingMaterial = new THREE.MeshLambertMaterial({ color: 0x2d3748 });
+                const housing = new THREE.Mesh(housingGeometry, housingMaterial);
+                housing.position.set(corner[0], 10, corner[1]);
+                scene.add(housing);
+
+                // Traffic lights (Red, Yellow, Green)
+                const lightStates = ['red', 'yellow', 'green'];
+                const cornerLights = {};
+                
+                lightStates.forEach((state, lightIndex) => {
+                    const lightGeometry = new THREE.SphereGeometry(0.3);
+                    const lightMaterial = new THREE.MeshBasicMaterial({ 
+                        color: state === 'red' ? 0xff0000 : state === 'yellow' ? 0xffaa00 : 0x00ff00,
+                        transparent: true,
+                        opacity: lightIndex === 2 ? 1.0 : 0.3 // Green light on by default
+                    });
                     
-                    const angle = (i / (vehicleCount / 5)) * Math.PI * 2;
-                    const radius = 5;
-                    vehicle.position.set(
-                        pos.x + Math.cos(angle) * radius,
-                        0.25,
-                        pos.z + Math.sin(angle) * radius
+                    const light = new THREE.Mesh(lightGeometry, lightMaterial);
+                    light.position.set(
+                        corner[0],
+                        10.5 - lightIndex * 0.8,
+                        corner[1]
                     );
-                    vehicle.rotation.y = angle;
                     
-                    trafficObjects.push(vehicle);
-                    scene.add(vehicle);
+                    scene.add(light);
+                    cornerLights[state] = light;
+                });
+                
+                trafficLights[intersection.id][index] = cornerLights;
+            });
+        }
+
+        function createDetailedBridge() {
+            const bridgeSpan = 120;
+            const bridgeWidth = 12;
+            const bridgeHeight = 3;
+            
+            // Main bridge deck - positioned to clear buildings
+            const deckGeometry = new THREE.BoxGeometry(bridgeSpan, bridgeHeight, bridgeWidth);
+            const deckMaterial = new THREE.MeshLambertMaterial({ 
+                color: 0x8c8c8c,
+                roughness: 0.8
+            });
+            const deck = new THREE.Mesh(deckGeometry, deckMaterial);
+            deck.position.set(0, 8, 0); // Bridge at y=8
+            deck.castShadow = true;
+            deck.receiveShadow = true;
+            deck.userData = { type: 'bridge_deck', id: 'main_bridge' };
+            scene.add(deck);
+            bridgeComponents.deck = deck;
+
+            // Bridge supports/piers
+            createBridgeSupports();
+            
+            // Bridge trusses
+            createBridgeTrusses();
+            
+            // Infrastructure sensors
+            createInfrastructureSensors();
+            
+            // Bridge safety barriers
+            createBridgeBarriers();
+        }
+
+        function createBridgeSupports() {
+            const supportPositions = [-45, -15, 15, 45];
+            
+            supportPositions.forEach((xPos, index) => {
+                // Main support pier
+                const pierGeometry = new THREE.CylinderGeometry(2, 3, 20, 12);
+                const pierMaterial = new THREE.MeshLambertMaterial({ 
+                    color: 0x6b7280,
+                    roughness: 0.9
+                });
+                const pier = new THREE.Mesh(pierGeometry, pierMaterial);
+                pier.position.set(xPos, 5, 0);
+                pier.castShadow = true;
+                pier.userData = { 
+                    type: 'bridge_support', 
+                    id: `support_${index + 1}`,
+                    health: Math.random() > 0.8 ? 'warning' : 'good'
+                };
+                scene.add(pier);
+                bridgeComponents[`support_${index + 1}`] = pier;
+
+                // Foundation
+                const foundationGeometry = new THREE.CylinderGeometry(4, 5, 3, 12);
+                const foundation = new THREE.Mesh(foundationGeometry, pierMaterial);
+                foundation.position.set(xPos, -1, 0);
+                scene.add(foundation);
+            });
+        }
+
+        function createBridgeTrusses() {
+            // Create truss structure along the bridge
+            for (let i = -50; i <= 50; i += 10) {
+                // Vertical truss members
+                const verticalGeometry = new THREE.BoxGeometry(0.5, 6, 0.5);
+                const trussMaterial = new THREE.MeshLambertMaterial({ color: 0x7c7c7c });
+                
+                [-5, 5].forEach(zOffset => {
+                    const vertical = new THREE.Mesh(verticalGeometry, trussMaterial);
+                    vertical.position.set(i, 12, zOffset);
+                    vertical.castShadow = true;
+                    scene.add(vertical);
+                });
+
+                // Diagonal truss members
+                if (i < 50) {
+                    const diagonalGeometry = new THREE.BoxGeometry(0.3, 7, 0.3);
+                    [-5, 5].forEach(zOffset => {
+                        const diagonal = new THREE.Mesh(diagonalGeometry, trussMaterial);
+                        diagonal.position.set(i + 5, 12, zOffset);
+                        diagonal.rotation.z = Math.PI / 6;
+                        scene.add(diagonal);
+                    });
+                }
+            }
+
+            // Top chord
+            const chordGeometry = new THREE.BoxGeometry(120, 0.8, 0.8);
+            [-5, 5].forEach(zOffset => {
+                const chord = new THREE.Mesh(chordGeometry, new THREE.MeshLambertMaterial({ color: 0x7c7c7c }));
+                chord.position.set(0, 15, zOffset);
+                chord.castShadow = true;
+                scene.add(chord);
+            });
+        }
+
+        function createInfrastructureSensors() {
+            const sensorPositions = [
+                { x: 0, y: 11, z: 0, id: 'SG001', type: 'strain', status: 'critical' },
+                { x: -30, y: 11, z: 0, id: 'SG002', type: 'strain', status: 'normal' },
+                { x: 30, y: 11, z: 0, id: 'SG003', type: 'strain', status: 'warning' },
+                { x: 0, y: 11, z: 5, id: 'SG004', type: 'strain', status: 'normal' }
+            ];
+
+            sensorPositions.forEach(sensor => {
+                const sensorGeometry = new THREE.BoxGeometry(1, 0.5, 1);
+                const sensorColor = sensor.status === 'critical' ? 0xff0000 : 
+                                  sensor.status === 'warning' ? 0xffaa00 : 0x00ff00;
+                
+                const sensorMaterial = new THREE.MeshLambertMaterial({ 
+                    color: sensorColor,
+                    emissive: sensorColor,
+                    emissiveIntensity: 0.3
+                });
+                
+                const sensorMesh = new THREE.Mesh(sensorGeometry, sensorMaterial);
+                sensorMesh.position.set(sensor.x, sensor.y, sensor.z);
+                sensorMesh.userData = {
+                    type: 'infrastructure_sensor',
+                    sensorType: sensor.type,
+                    id: sensor.id,
+                    status: sensor.status,
+                    value: Math.floor(Math.random() * 300 + 50)
+                };
+                
+                scene.add(sensorMesh);
+                infrastructureSensors[sensor.id] = sensorMesh;
+
+                // Add pulsing effect for critical sensors
+                if (sensor.status === 'critical') {
+                    const pulseLight = new THREE.PointLight(0xff0000, 2, 10);
+                    pulseLight.position.set(sensor.x, sensor.y + 2, sensor.z);
+                    scene.add(pulseLight);
+                }
+            });
+        }
+
+        function createBridgeBarriers() {
+            // Safety barriers along bridge edges
+            [-8, 8].forEach(zOffset => {
+                for (let x = -55; x <= 55; x += 5) {
+                    const barrierGeometry = new THREE.BoxGeometry(4, 1.2, 0.2);
+                    const barrierMaterial = new THREE.MeshLambertMaterial({ color: 0x9ca3af });
+                    const barrier = new THREE.Mesh(barrierGeometry, barrierMaterial);
+                    barrier.position.set(x, 10.2, zOffset);
+                    barrier.castShadow = true;
+                    scene.add(barrier);
+                }
+            });
+        }
+
+        function createEnhancedDistricts() {
+            const districts = [
+                { name: 'Downtown', center: [0, 80], color: 0xff6b6b, buildings: 15 }, // Moved away from bridge
+                { name: 'Northside', center: [-120, 120], color: 0x4ecdc4, buildings: 12 },
+                { name: 'Eastport', center: [120, 120], color: 0x45b7d1, buildings: 10 },
+                { name: 'Westview', center: [-120, -120], color: 0x96ceb4, buildings: 8 },
+                { name: 'Tech District', center: [120, -120], color: 0xfeca57, buildings: 10 }
+            ];
+
+            districts.forEach(district => {
+                createDistrictBuildings(district);
+            });
+        }
+
+        function createDistrictBuildings(district) {
+            const [centerX, centerZ] = district.center;
+            
+            for (let i = 0; i < district.buildings; i++) {
+                const angle = (i / district.buildings) * Math.PI * 2;
+                const radius = 20 + Math.random() * 40;
+                const x = centerX + Math.cos(angle) * radius;
+                const z = centerZ + Math.sin(angle) * radius;
+                
+                // Ensure buildings don't interfere with bridge (y=0 bridge area)
+                if (Math.abs(x) < 70 && Math.abs(z) < 15) {
+                    continue; // Skip buildings that would interfere with bridge
                 }
                 
-                pole.userData = { type: 'traffic', id: sensorId, data: data };
-                light.userData = { type: 'traffic', id: sensorId, data: data };
+                const height = 10 + Math.random() * (district.name === 'Downtown' ? 40 : 25);
+                const width = 5 + Math.random() * 8;
+                const depth = 5 + Math.random() * 8;
+
+                const buildingGeometry = new THREE.BoxGeometry(width, height, depth);
+                const buildingMaterial = new THREE.MeshLambertMaterial({ 
+                    color: new THREE.Color(district.color).multiplyScalar(0.6 + Math.random() * 0.4)
+                });
                 
-                trafficObjects.push(pole, light, glow);
-                scene.add(pole, light, glow);
-            });
+                const building = new THREE.Mesh(buildingGeometry, buildingMaterial);
+                building.position.set(x, height / 2, z);
+                building.castShadow = true;
+                building.receiveShadow = true;
+                building.userData = { 
+                    type: 'building', 
+                    district: district.name,
+                    height: height
+                };
+                scene.add(building);
+
+                // Add building lights
+                createBuildingLights(building, x, height, z);
+            }
         }
 
-        function updateEnvironmentVisualization() {
-            // Clear existing environment objects
-            environmentObjects.forEach(obj => scene.remove(obj));
-            environmentObjects = [];
+        function createBuildingLights(building, x, height, z) {
+            const lightCount = Math.floor(height / 5);
+            for (let i = 0; i < lightCount; i++) {
+                if (Math.random() > 0.4) { // 60% chance of lights being on
+                    const lightY = 3 + i * 5;
+                    const lightGeometry = new THREE.SphereGeometry(0.2);
+                    const lightMaterial = new THREE.MeshBasicMaterial({ 
+                        color: 0xffffff,
+                        emissive: 0xffffff,
+                        emissiveIntensity: 0.8
+                    });
+                    const light = new THREE.Mesh(lightGeometry, lightMaterial);
+                    light.position.set(
+                        x + (Math.random() - 0.5) * 3,
+                        lightY,
+                        z + (Math.random() - 0.5) * 3
+                    );
+                    scene.add(light);
+                }
+            }
+        }
 
-            if (!showLayers.environment) return;
+        function createTrafficManagementSystem() {
+            // Create vehicles that follow roads and traffic signals
+            createTrafficVehicles();
+            
+            // Start traffic simulation
+            startTrafficSimulation();
+        }
 
-            const envPositions = [
-                { x: -20, z: -20 },
-                { x: 20, z: -20 },
-                { x: -20, z: 20 },
-                { x: 20, z: 20 },
-                { x: 0, z: 0 }
+        function createTrafficVehicles() {
+            const vehicleTypes = [
+                { geometry: new THREE.BoxGeometry(2, 1, 4), color: 0xff6b6b, type: 'car' },
+                { geometry: new THREE.BoxGeometry(2.5, 2, 8), color: 0x4ecdc4, type: 'truck' },
+                { geometry: new THREE.BoxGeometry(1.8, 1, 3.5), color: 0x45b7d1, type: 'small_car' },
+                { geometry: new THREE.BoxGeometry(3, 2.5, 12), color: 0x96ceb4, type: 'bus' }
             ];
 
-            airQualityData.forEach((station, index) => {
-                if (index >= envPositions.length) return;
+            // Create vehicles on roads
+            Object.keys(roadNetwork).forEach(roadId => {
+                const road = roadNetwork[roadId];
+                const roadData = road.userData;
+                
+                const vehicleCount = Math.floor(Math.random() * 6) + 2;
+                
+                for (let i = 0; i < vehicleCount; i++) {
+                    const vehicleType = vehicleTypes[Math.floor(Math.random() * vehicleTypes.length)];
+                    const vehicle = new THREE.Mesh(vehicleType.geometry, 
+                        new THREE.MeshLambertMaterial({ color: vehicleType.color }));
+                    
+                    // Position vehicle along road
+                    const progress = i / vehicleCount;
+                    const roadAngle = roadData.angle;
+                    const roadLength = roadData.length;
+                    
+                    const x = roadData.start[0] + (roadData.end[0] - roadData.start[0]) * progress;
+                    const z = roadData.start[1] + (roadData.end[1] - roadData.start[1]) * progress;
+                    const y = roadData.elevation + 1.5;
+                    
+                    vehicle.position.set(x, y, z);
+                    vehicle.rotation.y = roadAngle;
+                    vehicle.castShadow = true;
+                    
+                    vehicle.userData = {
+                        type: 'vehicle',
+                        vehicleType: vehicleType.type,
+                        roadId: roadId,
+                        baseSpeed: 0.3 + Math.random() * 0.2,
+                        currentSpeed: 0,
+                        progress: progress,
+                        direction: 1,
+                        id: `vehicle_${vehicles.length}`,
+                        atIntersection: false,
+                        waitingAtLight: false
+                    };
+                    
+                    scene.add(vehicle);
+                    vehicles.push(vehicle);
+                }
+            });
+        }
 
-                const pos = envPositions[index];
+        function createEnvironmentalSystems() {
+            // Air quality monitoring stations
+            const monitoringStations = [
+                { pos: [-80, -80], name: 'Industrial Monitor' },
+                { pos: [80, 80], name: 'Residential Monitor' },
+                { pos: [0, 80], name: 'Commercial Monitor' },
+                { pos: [-80, 80], name: 'University Monitor' },
+                { pos: [80, -80], name: 'Tech District Monitor' }
+            ];
+
+            monitoringStations.forEach(station => {
+                const [x, z] = station.pos;
                 
-                // Air quality monitor
-                const monitorGeometry = new THREE.BoxGeometry(2, 4, 2);
-                const pm25Status = station.pm25 > 25 ? 'danger' : station.pm25 > 15 ? 'warning' : 'normal';
-                const monitorColor = pm25Status === 'danger' ? 0xff0000 : 
-                                   pm25Status === 'warning' ? 0xffaa00 : 0x00ff00;
-                
-                const monitorMaterial = new THREE.MeshLambertMaterial({ color: monitorColor });
-                const monitor = new THREE.Mesh(monitorGeometry, monitorMaterial);
-                monitor.position.set(pos.x, 2, pos.z);
-                
-                // Pollution cloud effect
-                const cloudGeometry = new THREE.SphereGeometry(3, 8, 8);
-                const cloudMaterial = new THREE.MeshBasicMaterial({
-                    color: monitorColor,
-                    transparent: true,
-                    opacity: station.pm25 / 100
+                const stationGeometry = new THREE.ConeGeometry(1.5, 6, 8);
+                const stationMaterial = new THREE.MeshLambertMaterial({ 
+                    color: 0x4ade80,
+                    emissive: 0x004400,
+                    emissiveIntensity: 0.3
                 });
-                const cloud = new THREE.Mesh(cloudGeometry, cloudMaterial);
-                cloud.position.set(pos.x, 6, pos.z);
                 
-                monitor.userData = { type: 'environment', id: station.district, data: station };
-                cloud.userData = { type: 'environment', id: station.district, data: station };
+                const stationMesh = new THREE.Mesh(stationGeometry, stationMaterial);
+                stationMesh.position.set(x, 5, z);
+                stationMesh.userData = { 
+                    type: 'environmental_station',
+                    name: station.name
+                };
+                scene.add(stationMesh);
+            });
+
+            // Energy grid (simplified)
+            createEnergyGrid();
+        }
+
+        function createEnergyGrid() {
+            // Solar farm
+            for (let i = 0; i < 20; i++) {
+                const x = -150 + (i % 5) * 12;
+                const z = -150 + Math.floor(i / 5) * 10;
                 
-                environmentObjects.push(monitor, cloud);
-                scene.add(monitor, cloud);
+                const panelGeometry = new THREE.BoxGeometry(8, 0.3, 5);
+                const panelMaterial = new THREE.MeshLambertMaterial({ 
+                    color: 0x1a365d,
+                    emissive: 0x4299e1,
+                    emissiveIntensity: 0.2
+                });
+                const panel = new THREE.Mesh(panelGeometry, panelMaterial);
+                panel.position.set(x, 3, z);
+                panel.rotation.x = -Math.PI / 6;
+                scene.add(panel);
+            }
+
+            // Wind turbines
+            for (let i = 0; i < 8; i++) {
+                const x = 150 + (i % 4) * 20;
+                const z = 150 + Math.floor(i / 4) * 20;
+                
+                // Turbine tower
+                const towerGeometry = new THREE.CylinderGeometry(0.8, 1.2, 35, 8);
+                const towerMaterial = new THREE.MeshLambertMaterial({ color: 0xf7fafc });
+                const tower = new THREE.Mesh(towerGeometry, towerMaterial);
+                tower.position.set(x, 17.5, z);
+                scene.add(tower);
+
+                // Turbine blades (simplified)
+                const bladeGroup = new THREE.Group();
+                for (let j = 0; j < 3; j++) {
+                    const bladeGeometry = new THREE.BoxGeometry(0.3, 12, 0.8);
+                    const blade = new THREE.Mesh(bladeGeometry, towerMaterial);
+                    blade.position.y = 6;
+                    blade.rotation.z = (j * Math.PI * 2) / 3;
+                    bladeGroup.add(blade);
+                }
+                bladeGroup.position.set(x, 35, z);
+                bladeGroup.userData = { type: 'wind_turbine', spinning: true };
+                scene.add(bladeGroup);
+            }
+        }
+
+        function startSimulationSystems() {
+            // Start traffic simulation
+            startTrafficSimulation();
+            
+            // Start infrastructure monitoring
+            startInfrastructureMonitoring();
+            
+            // Start environmental monitoring
+            startEnvironmentalMonitoring();
+            
+            // Start UI updates
+            startUIUpdates();
+        }
+
+        function startTrafficSimulation() {
+            setInterval(() => {
+                if (trafficFlowActive) {
+                    updateTrafficLights();
+                    updateTrafficFlow();
+                }
+            }, 100); // Update every 100ms for smooth movement
+        }
+
+        function updateTrafficLights() {
+            const currentTime = Date.now();
+            
+            Object.keys(currentTrafficLightStates).forEach(intersectionId => {
+                const state = currentTrafficLightStates[intersectionId];
+                const elapsed = currentTime - state.timer;
+                
+                // Check if it's time to change phase
+                if (elapsed >= state.duration[state.phase]) {
+                    state.phase = (state.phase + 1) % 3;
+                    state.timer = currentTime;
+                    
+                    // Update visual lights
+                    const intersection = trafficLights[intersectionId];
+                    if (intersection) {
+                        intersection.forEach(corner => {
+                            if (corner) {
+                                // Reset all lights
+                                corner.red.material.opacity = 0.3;
+                                corner.yellow.material.opacity = 0.3;
+                                corner.green.material.opacity = 0.3;
+                                
+                                // Activate current light
+                                switch(state.phase) {
+                                    case 0: // Green
+                                        corner.green.material.opacity = 1.0;
+                                        break;
+                                    case 1: // Yellow
+                                        corner.yellow.material.opacity = 1.0;
+                                        break;
+                                    case 2: // Red
+                                        corner.red.material.opacity = 1.0;
+                                        break;
+                                }
+                            }
+                        });
+                    }
+                }
             });
         }
 
-        function updateInfrastructureVisualization() {
-            // Clear existing infrastructure objects
-            infrastructureObjects.forEach(obj => scene.remove(obj));
-            infrastructureObjects = [];
-
-            if (!showLayers.infrastructure) return;
-
-            // Bridge structure
-            const bridgeGeometry = new THREE.BoxGeometry(80, 2, 8);
-            const bridgeStatus = infrastructureData.overall_status || 'unknown';
-            const bridgeColor = bridgeStatus === 'good' ? 0x4CAF50 : 
-                               bridgeStatus === 'fair' ? 0xFF9800 : 
-                               bridgeStatus === 'poor' ? 0xF44336 : 0x666666;
-            
-            const bridgeMaterial = new THREE.MeshLambertMaterial({ color: bridgeColor });
-            const bridge = new THREE.Mesh(bridgeGeometry, bridgeMaterial);
-            bridge.position.set(0, 10, 0);
-            
-            // Bridge supports
-            const supportGeometry = new THREE.CylinderGeometry(1, 1, 10);
-            const supportMaterial = new THREE.MeshLambertMaterial({ color: bridgeColor });
-            
-            [-30, -10, 10, 30].forEach(x => {
-                const support = new THREE.Mesh(supportGeometry, supportMaterial);
-                support.position.set(x, 5, 0);
-                infrastructureObjects.push(support);
-                scene.add(support);
+        function updateTrafficFlow() {
+            vehicles.forEach(vehicle => {
+                const userData = vehicle.userData;
+                const road = roadNetwork[userData.roadId];
+                
+                if (!road) return;
+                
+                const roadData = road.userData;
+                
+                // Check traffic light status for vehicles near intersections
+                let canMove = true;
+                const nearestIntersection = findNearestIntersection(vehicle.position);
+                
+                if (nearestIntersection && getDistanceToIntersection(vehicle.position, nearestIntersection) < 15) {
+                    const lightState = currentTrafficLightStates[nearestIntersection.id];
+                    if (lightState && lightState.phase !== 0) { // Not green
+                        canMove = false;
+                        userData.waitingAtLight = true;
+                    } else {
+                        userData.waitingAtLight = false;
+                    }
+                } else {
+                    userData.waitingAtLight = false;
+                }
+                
+                // Set current speed based on conditions
+                if (canMove && !emergencyMode) {
+                    userData.currentSpeed = userData.baseSpeed;
+                } else {
+                    userData.currentSpeed = 0;
+                }
+                
+                // Update progress along road
+                userData.progress += userData.currentSpeed * 0.01;
+                
+                // Reset if vehicle reaches end of road
+                if (userData.progress > 1) {
+                    userData.progress = 0;
+                    
+                    // Find connected road or loop back
+                    const connectedRoad = findConnectedRoad(roadData);
+                    if (connectedRoad) {
+                        userData.roadId = connectedRoad;
+                    }
+                }
+                
+                // Calculate new position
+                const startX = roadData.start[0];
+                const startZ = roadData.start[1];
+                const endX = roadData.end[0];
+                const endZ = roadData.end[1];
+                
+                const x = startX + (endX - startX) * userData.progress;
+                const z = startZ + (endZ - startZ) * userData.progress;
+                const y = roadData.elevation + 1.5;
+                
+                vehicle.position.set(x, y, z);
+                vehicle.rotation.y = roadData.angle;
+                
+                // Update bridge load if vehicle is on bridge
+                if (roadData.roadType === 'bridge_deck') {
+                    updateBridgeLoad();
+                }
             });
-            
-            bridge.userData = { type: 'infrastructure', id: 'bridge', data: infrastructureData };
-            
-            infrastructureObjects.push(bridge);
-            scene.add(bridge);
         }
 
+        function findNearestIntersection(position) {
+            const intersections = [
+                { id: 'TS001', pos: [0, 100] },
+                { id: 'TS002', pos: [100, 100] },
+                { id: 'TS003', pos: [-100, 100] },
+                { id: 'TS004', pos: [100, -100] },
+                { id: 'TS005', pos: [-100, -100] }
+            ];
+            
+            let nearest = null;
+            let minDistance = Infinity;
+            
+            intersections.forEach(intersection => {
+                const distance = Math.sqrt(
+                    Math.pow(position.x - intersection.pos[0], 2) +
+                    Math.pow(position.z - intersection.pos[1], 2)
+                );
+                
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    nearest = intersection;
+                }
+            });
+            
+            return minDistance < 20 ? nearest : null;
+        }
+
+        function getDistanceToIntersection(position, intersection) {
+            return Math.sqrt(
+                Math.pow(position.x - intersection.pos[0], 2) +
+                Math.pow(position.z - intersection.pos[1], 2)
+            );
+        }
+
+        function findConnectedRoad(currentRoadData) {
+            // Simple logic to find connecting roads
+            const roadIds = Object.keys(roadNetwork);
+            const availableRoads = roadIds.filter(id => id !== currentRoadData.roadId);
+            return availableRoads[Math.floor(Math.random() * availableRoads.length)];
+        }
+
+        function updateBridgeLoad() {
+            // Count vehicles on bridge
+            const bridgeVehicles = vehicles.filter(v => {
+                const road = roadNetwork[v.userData.roadId];
+                return road && road.userData.roadType === 'bridge_deck';
+            });
+            
+            // Update UI
+            document.getElementById('bridge-vehicles').textContent = bridgeVehicles.length;
+            
+            // Calculate total load (simplified)
+            const totalLoad = bridgeVehicles.length * 25; // Average 25 kN per vehicle
+            document.getElementById('bridge-load').textContent = `${totalLoad} kN`;
+            
+            // Update max axle load
+            const maxAxle = bridgeVehicles.length > 0 ? Math.max(20, totalLoad / bridgeVehicles.length) : 0;
+            document.getElementById('max-axle').textContent = `${Math.round(maxAxle)} kN`;
+        }
+
+        function startInfrastructureMonitoring() {
+            setInterval(() => {
+                updateInfrastructureSensors();
+                updateBridgeAnalysis();
+            }, 2000); // Update every 2 seconds
+        }
+
+        function updateInfrastructureSensors() {
+            // Update strain sensors with realistic variations
+            Object.keys(infrastructureSensors).forEach(sensorId => {
+                const sensor = infrastructureSensors[sensorId];
+                const sensorData = sensor.userData;
+                
+                // Simulate sensor readings with some variation
+                let baseValue = sensorData.value;
+                const variation = (Math.random() - 0.5) * 10;
+                const newValue = Math.max(50, baseValue + variation);
+                
+                // Update sensor status based on value
+                let newStatus = 'normal';
+                if (newValue > 250) {
+                    newStatus = 'critical';
+                } else if (newValue > 200) {
+                    newStatus = 'warning';
+                }
+                
+                // Update sensor appearance
+                const color = newStatus === 'critical' ? 0xff0000 : 
+                             newStatus === 'warning' ? 0xffaa00 : 0x00ff00;
+                
+                sensor.material.color.setHex(color);
+                sensor.material.emissive.setHex(color);
+                sensor.userData.value = newValue;
+                sensor.userData.status = newStatus;
+                
+                // Update UI
+                const displayElement = document.getElementById(`${sensorId.toLowerCase()}-value`);
+                if (displayElement) {
+                    displayElement.textContent = `${Math.round(newValue)} µε`;
+                }
+            });
+        }
+
+        function updateBridgeAnalysis() {
+            // Update bridge health assessment
+            const criticalSensors = Object.values(infrastructureSensors).filter(
+                sensor => sensor.userData.status === 'critical'
+            ).length;
+            
+            const warningSensors = Object.values(infrastructureSensors).filter(
+                sensor => sensor.userData.status === 'warning'
+            ).length;
+            
+            let healthStatus = 'Good';
+            let healthColor = '#4ade80';
+            
+            if (criticalSensors > 0) {
+                healthStatus = 'Critical';
+                healthColor = '#ef4444';
+            } else if (warningSensors > 1) {
+                healthStatus = 'Fair';
+                healthColor = '#fbbf24';
+            }
+            
+            document.getElementById('bridge-health').textContent = healthStatus;
+            document.getElementById('bridge-health').style.color = healthColor;
+        }
+
+        function startEnvironmentalMonitoring() {
+            setInterval(() => {
+                updateEnvironmentalData();
+            }, 5000); // Update every 5 seconds
+        }
+
+        function updateEnvironmentalData() {
+            // Simulate environmental data updates
+            const airQualityIndex = Math.floor(Math.random() * 100);
+            let airQualityStatus = 'Good';
+            let airQualityColor = '#4ade80';
+            
+            if (airQualityIndex > 80) {
+                airQualityStatus = 'Poor';
+                airQualityColor = '#ef4444';
+            } else if (airQualityIndex > 60) {
+                airQualityStatus = 'Moderate';
+                airQualityColor = '#fbbf24';
+            }
+            
+            document.getElementById('air-quality').textContent = airQualityStatus;
+            document.getElementById('air-quality').style.color = airQualityColor;
+        }
+
+        function startUIUpdates() {
+            setInterval(() => {
+                updateTrafficMetrics();
+            }, 3000); // Update every 3 seconds
+        }
+
+        function updateTrafficMetrics() {
+            // Calculate traffic metrics
+            const totalVehicles = vehicles.length;
+            const movingVehicles = vehicles.filter(v => v.userData.currentSpeed > 0);
+            const averageSpeed = totalVehicles > 0 ? 
+                vehicles.reduce((sum, v) => sum + v.userData.currentSpeed, 0) / totalVehicles * 100 : 0;
+            const waitingVehicles = vehicles.filter(v => v.userData.waitingAtLight).length;
+            const congestionLevel = Math.max(0, Math.min(100, (waitingVehicles / totalVehicles) * 100));
+            
+            document.getElementById('total-vehicles').textContent = totalVehicles;
+            document.getElementById('avg-speed').textContent = `${Math.round(averageSpeed)} km/h`;
+            document.getElementById('congestion-percent').textContent = `${Math.round(congestionLevel)}%`;
+            document.getElementById('congestion-level').textContent = 
+                congestionLevel > 80 ? 'Critical' : congestionLevel > 60 ? 'High' : 'Moderate';
+        }
+
+        // Control functions
+        function focusOnAgent(agentType) {
+            // Focus camera on agent-specific areas
+            switch(agentType) {
+                case 'environmental':
+                    camera.position.set(-100, 80, 100);
+                    controls.target.set(-100, 0, 0);
+                    break;
+                case 'infrastructure':
+                    camera.position.set(50, 60, 80);
+                    controls.target.set(0, 8, 0); // Focus on bridge
+                    break;
+                case 'traffic':
+                    camera.position.set(0, 80, 150);
+                    controls.target.set(0, 0, 0); // Focus on main intersection
+                    break;
+            }
+            controls.update();
+        }
+
+        function toggleTrafficFlow() {
+            trafficFlowActive = !trafficFlowActive;
+            console.log(`Traffic flow ${trafficFlowActive ? 'enabled' : 'disabled'}`);
+        }
+
+        function simulateEmergency() {
+            emergencyMode = !emergencyMode;
+            console.log(`Emergency mode ${emergencyMode ? 'activated' : 'deactivated'}`);
+            
+            if (emergencyMode) {
+                // Change all lights to red
+                Object.keys(trafficLights).forEach(intersectionId => {
+                    const intersection = trafficLights[intersectionId];
+                    intersection.forEach(corner => {
+                        if (corner) {
+                            corner.red.material.opacity = 1.0;
+                            corner.yellow.material.opacity = 0.3;
+                            corner.green.material.opacity = 0.3;
+                        }
+                    });
+                    
+                    // Set traffic light state to red
+                    currentTrafficLightStates[intersectionId].phase = 2;
+                });
+            }
+        }
+
+        function optimizeTraffic() {
+            // Simulate traffic optimization
+            vehicles.forEach(vehicle => {
+                vehicle.userData.baseSpeed = Math.min(vehicle.userData.baseSpeed * 1.2, 0.8);
+            });
+            console.log('Traffic optimization applied');
+        }
+
+        function inspectBridge() {
+            bridgeInspectionMode = !bridgeInspectionMode;
+            console.log(`Bridge inspection mode ${bridgeInspectionMode ? 'started' : 'stopped'}`);
+            
+            // Highlight bridge components during inspection
+            if (bridgeInspectionMode) {
+                Object.values(infrastructureSensors).forEach(sensor => {
+                    sensor.scale.setScalar(1.5);
+                });
+            } else {
+                Object.values(infrastructureSensors).forEach(sensor => {
+                    sensor.scale.setScalar(1.0);
+                });
+            }
+        }
+
+        function changeLight(intersectionId) {
+            // Manually change traffic light
+            const state = currentTrafficLightStates[intersectionId];
+            if (state) {
+                state.phase = (state.phase + 1) % 3;
+                state.timer = Date.now();
+                
+                // Update visual representation
+                updateTrafficLights();
+                
+                // Update UI indicator
+                const lightElement = document.getElementById(`light-${intersectionId.toLowerCase()}`);
+                if (lightElement) {
+                    const classes = ['light-green', 'light-yellow', 'light-red'];
+                    lightElement.className = `light-indicator ${classes[state.phase]}`;
+                }
+            }
+            
+            console.log(`Changed light for ${intersectionId} to phase ${state ? state.phase : 'unknown'}`);
+        }
+
+        function generateMaintenanceReport() {
+            console.log('Generating maintenance report...');
+            alert('Maintenance Report Generated\n\n' +
+                  '• SG001: Requires immediate attention\n' +
+                  '• SG003: Schedule inspection within 1 week\n' +
+                  '• Overall bridge health: Fair\n' +
+                  '• Recommended actions: Replace strain sensor SG001');
+        }
+
+        function startBridgeInspection() {
+            console.log('Starting automated bridge inspection...');
+            alert('Automated Bridge Inspection Started\n\n' +
+                  '• Deploying sensor drones\n' +
+                  '• Scanning structural integrity\n' +
+                  '• Estimating completion: 2 hours\n' +
+                  '• Report will be generated automatically');
+        }
+
+        // Event handlers
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Animation loop
         function animate() {
             requestAnimationFrame(animate);
             
             controls.update();
             
-            // Animate traffic vehicles
-            trafficObjects.forEach(obj => {
-                if (obj.geometry instanceof THREE.BoxGeometry && obj.geometry.parameters.height === 0.5) {
-                    obj.rotation.y += 0.01 * animationSpeed;
+            // Animate wind turbines
+            scene.traverse(obj => {
+                if (obj.userData.type === 'wind_turbine' && obj.userData.spinning) {
+                    obj.rotation.z += 0.02;
                 }
             });
             
-            // Animate pollution clouds
-            environmentObjects.forEach(obj => {
-                if (obj.geometry instanceof THREE.SphereGeometry) {
-                    obj.rotation.y += 0.005 * animationSpeed;
-                    obj.position.y = 6 + Math.sin(Date.now() * 0.001) * 0.5;
+            // Animate sensor pulsing effects
+            const time = Date.now() * 0.005;
+            Object.values(infrastructureSensors).forEach(sensor => {
+                if (sensor.userData.status === 'critical') {
+                    sensor.scale.setScalar(1 + Math.sin(time * 3) * 0.1);
                 }
             });
             
             renderer.render(scene, camera);
         }
 
-        // Control functions
-        function setCameraView(view) {
-            switch(view) {
-                case 'aerial':
-                    camera.position.set(0, 100, 0);
-                    controls.target.set(0, 0, 0);
-                    break;
-                case 'street':
-                    camera.position.set(0, 5, 50);
-                    controls.target.set(0, 0, 0);
-                    break;
-                case 'overview':
-                    camera.position.set(50, 50, 50);
-                    controls.target.set(0, 0, 0);
-                    break;
-            }
-            controls.update();
-        }
-
-        function toggleLayer(layer) {
-            showLayers[layer] = !showLayers[layer];
-            const button = document.getElementById(`${layer}-toggle`);
-            button.classList.toggle('active');
-            
-            switch(layer) {
-                case 'traffic':
-                    updateTrafficVisualization();
-                    break;
-                case 'environment':
-                    updateEnvironmentVisualization();
-                    break;
-                case 'infrastructure':
-                    updateInfrastructureVisualization();
-                    break;
-            }
-        }
-
-        function updateAnimationSpeed(speed) {
-            animationSpeed = parseFloat(speed);
-            document.getElementById('speed-value').textContent = speed;
-        }
-
-        function resetView() {
-            setCameraView('overview');
-        }
-
-        function toggleFullscreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen();
-            } else {
-                document.exitFullscreen();
-            }
-        }
-
-        // Socket event handlers
-        socket.on('connect', function() {
-            console.log('Connected to server');
-        });
-
-        socket.on('traffic_update', function(data) {
-            trafficData = data;
-            updateTrafficVisualization();
-            document.getElementById('traffic-count').textContent = Object.keys(data).length;
-        });
-
-        socket.on('air_quality_update', function(data) {
-            airQualityData = data;
-            updateEnvironmentVisualization();
-            document.getElementById('air-count').textContent = data.length;
-        });
-
-        socket.on('bridge_health_update', function(data) {
-            infrastructureData = data;
-            updateInfrastructureVisualization();
-        });
-
-        socket.on('joint_alert', function(alert) {
-            alerts.unshift(alert);
-            if (alerts.length > 20) alerts = alerts.slice(0, 20);
-            document.getElementById('alert-count').textContent = alerts.length;
-        });
-
-        // Mouse interaction
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
-        const tooltip = document.getElementById('tooltip');
-
-        function onMouseMove(event) {
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects([...trafficObjects, ...environmentObjects, ...infrastructureObjects]);
-
-            if (intersects.length > 0) {
-                const object = intersects[0].object;
-                if (object.userData.type) {
-                    showTooltip(event, object.userData);
-                } else {
-                    hideTooltip();
-                }
-            } else {
-                hideTooltip();
-            }
-        }
-
-        function showTooltip(event, userData) {
-            let content = '';
-            
-            switch(userData.type) {
-                case 'traffic':
-                    content = `
-                        <strong>Traffic Sensor: ${userData.id}</strong><br>
-                        Vehicles: ${userData.data.vehicle_count || 0}<br>
-                        Speed: ${Math.round(userData.data.average_speed || 0)} km/h<br>
-                        Congestion: ${Math.round((userData.data.congestion_level || 0) * 100)}%
-                    `;
-                    break;
-                case 'environment':
-                    content = `
-                        <strong>Air Quality: ${userData.id}</strong><br>
-                        PM2.5: ${userData.data.pm25.toFixed(1)} µg/m³<br>
-                        NO2: ${userData.data.no2.toFixed(1)} µg/m³<br>
-                        CO: ${userData.data.co.toFixed(1)} ppm
-                    `;
-                    break;
-                case 'infrastructure':
-                    content = `
-                        <strong>Infrastructure: ${userData.id}</strong><br>
-                        Status: ${userData.data.overall_status || 'Unknown'}<br>
-                        Concerns: ${userData.data.concern_count || 0}<br>
-                        Critical: ${userData.data.critical_concerns || 0}
-                    `;
-                    break;
-            }
-            
-            tooltip.innerHTML = content;
-            tooltip.style.left = event.clientX + 10 + 'px';
-            tooltip.style.top = event.clientY + 10 + 'px';
-            tooltip.style.display = 'block';
-        }
-
-        function hideTooltip() {
-            tooltip.style.display = 'none';
-        }
-
-        // Event listeners
-        window.addEventListener('mousemove', onMouseMove);
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
         // Initialize when page loads
-        window.addEventListener('load', () => {
-            setTimeout(init3DScene, 1); // Small delay for loading effect
-        });
+        window.addEventListener('load', init);
     </script>
 </body>
 </html>
